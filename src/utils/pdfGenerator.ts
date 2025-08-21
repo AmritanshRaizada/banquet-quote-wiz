@@ -113,8 +113,8 @@ export const generateQuotationPDF = async (
   
   pdf.text('Banquet per plate', 25, yPosition);
   pdf.text(quoteData.guests.toString(), 100, yPosition);
-  pdf.text(`₹${quoteData.pricePerPlate}`, 130, yPosition);
-  pdf.text(`₹${total.toLocaleString()}`, 160, yPosition);
+  pdf.text(`Rs ${quoteData.pricePerPlate}`, 130, yPosition);
+  pdf.text(`Rs ${total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`, 160, yPosition);
   
   yPosition += 15;
   
@@ -122,7 +122,7 @@ export const generateQuotationPDF = async (
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(14);
   pdf.text('Total Amount:', 130, yPosition);
-  pdf.text(`₹${total.toLocaleString()}`, 160, yPosition);
+  pdf.text(`Rs ${total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`, 160, yPosition);
 
   // Images section if any images are selected
   if (selectedImages.length > 0) {
