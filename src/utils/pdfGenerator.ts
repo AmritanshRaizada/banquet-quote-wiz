@@ -17,219 +17,330 @@ interface QuoteData {
   notes: string;
 }
 
+// Utility function to format currency
+const formatCurrency = (amount: number): string => {
+  return `Rs ${amount.toLocaleString('en-IN')}`;
+};
+
+// Utility function to load image with error handling
+const loadImage = async (url: string): Promise<string> => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read image'));
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error(`Failed to load image: ${url}`, error);
+    throw error;
+  }
+};
+const addWatermark = async (pdf: jsPDF, pageWidth: number, pageHeight: number): Promise<void> => {
+  try {
+    const watermarkDataUrl = await loadImage('/public/Logo.png'); // your watermark image
+
+    const wmWidth = pageWidth * 0.5;   // watermark covers ~50% page width
+    const wmHeight = wmWidth;          // make it square
+    const x = (pageWidth - wmWidth) / 2;
+    const y = (pageHeight - wmHeight) / 2;
+
+    // Set transparency for watermark
+    (pdf as any).setGState(new (pdf as any).GState({ opacity: 0.1 }));
+
+    pdf.addImage(watermarkDataUrl, 'PNG', x, y, wmWidth, wmHeight);
+
+    // Reset transparency back to normal
+    (pdf as any).setGState(new (pdf as any).GState({ opacity: 1 }));
+  } catch (error) {
+    console.warn('Watermark not added:', error);
+  }
+};
+
+// Utility function to sanitize filename
+const sanitizeFileName = (name: string): string => {
+  return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+};
+
 export const generateQuotationPDF = async (
   banquet: Banquet,
   quoteData: QuoteData,
-  selectedImages: string[]
-) => {
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  
-  // Colors matching our theme
-  const primaryColor = '#601220';
-  const textColor = '#2D2D2D';
-  const lightGray = '#F5F5F5';
+  selectedImages: string[] = []
+): Promise<void> => {
+  try {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    await addWatermark(pdf, pageWidth, pageHeight);
+    // Colors matching our theme
+    const primaryColor = '#601220';
+    const secondaryColor = '#8D2B3E';
+    const textColor = '#2D2D2D';
+    const lightGray = '#F5F5F5';
+    const borderColor = '#DDDDDD';
 
-  // Fetch and add logo
-  const response = await fetch('/public/B W Logo.png');
-  const blob = await response.blob();
-  const reader = new FileReader();
-  const dataUrl = await new Promise(resolve => {
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(blob);
-  });
-  // Header
-  pdf.setFillColor(primaryColor);
-  pdf.rect(0, 0, pageWidth, 30, 'F');
+    let yPosition = 40;
 
-  pdf.addImage(dataUrl as string, 'PNG', 15, -5, 40, 40);
-  
-  pdf.setTextColor('#FFFFFF');
-  pdf.setFontSize(24);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('BANQUET QUOTATION', pageWidth / 2, 20, { align: 'center' });
+    // Try to load and add logo
+    try {
+      const logoDataUrl = await loadImage('/public/B W Logo.png');
+      pdf.addImage(logoDataUrl, 'PNG', 15, 10, 30, 30);
+    } catch (error) {
+      console.warn('Logo not found, proceeding without it');
+    }
 
-  // Company name
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text('Banquet Quotation Maker', pageWidth - 20, 40, { align: 'right' });
+    // Header
+    pdf.setFillColor(primaryColor);
+    pdf.rect(0, 0, pageWidth, 50, 'F');
+    
+    pdf.setTextColor('#FFFFFF');
+    pdf.setFontSize(24);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('BANQUET QUOTATION', pageWidth / 2, 30, { align: 'center' });
 
-  let yPosition = 60;
+    // Company info
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
 
-  // Venue Information
-  pdf.setTextColor(textColor);
-  pdf.setFontSize(16);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Venue Details', 20, yPosition);
-  
-  yPosition += 10;
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(`Venue: ${banquet.name}`, 20, yPosition);
-  yPosition += 7;
-  pdf.text(`Location: ${banquet.city}`, 20, yPosition);
-  yPosition += 7;
-  pdf.text(`Capacity: Up to ${banquet.capacity} guests`, 20, yPosition);
-  
-  yPosition += 20;
+    pdf.text('contact@banquetquotationmaker.com • +91 1234567890', pageWidth / 2, 45, { align: 'center' });
 
-  // Client Information
-  pdf.setFontSize(16);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Client Information', 20, yPosition);
-  
-  yPosition += 10;
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(`Client Name: ${quoteData.clientName}`, 20, yPosition);
-  yPosition += 7;
-  pdf.text(`Event Date: ${new Date(quoteData.eventDate).toLocaleDateString('en-IN')}`, 20, yPosition);
-  yPosition += 7;
-  pdf.text(`Guests: ${quoteData.guests}`, 20, yPosition);
-  yPosition += 7;
-  pdf.text(`Rooms: ${quoteData.rooms}`, 20, yPosition);
-  
-  if (quoteData.notes) {
-    yPosition += 7;
-    pdf.text(`Notes: ${quoteData.notes}`, 20, yPosition);
+    // Quotation details header
+    pdf.setFillColor(secondaryColor);
+    pdf.rect(20, yPosition, pageWidth - 40, 15, 'F');
+    pdf.setTextColor('#FFFFFF');
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('QUOTATION DETAILS', pageWidth / 2, yPosition + 10, { align: 'center' });
+    
+    yPosition += 25;
+
+    // Two column layout
+    const col1 = 20;
+    const col2 = pageWidth / 2 + 10;
+
+    // Venue Information
+    pdf.setTextColor(textColor);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Venue Details', col1, yPosition);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Venue: ${banquet.name}`, col1, yPosition + 7);
+    pdf.text(`Location: ${banquet.city}`, col1, yPosition + 14);
+    pdf.text(`Capacity: Up to ${banquet.capacity.toLocaleString('en-IN')} guests`, col1, yPosition + 21);
+    pdf.text(`Base Price: ${formatCurrency(banquet.basePrice)} per plate`, col1, yPosition + 28);
+
+    // Client Information
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Client Information', col2, yPosition);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Client Name: ${quoteData.clientName}`, col2, yPosition + 7);
+    pdf.text(`Event Date: ${new Date(quoteData.eventDate).toLocaleDateString('en-IN')}`, col2, yPosition + 14);
+    pdf.text(`Guests: ${quoteData.guests.toLocaleString('en-IN')}`, col2, yPosition + 21);
+    pdf.text(`Rooms: ${quoteData.rooms}`, col2, yPosition + 28);
+    
+    yPosition += 40;
+
+    // Pricing Details
+    pdf.setFillColor(secondaryColor);
+    pdf.rect(20, yPosition, pageWidth - 40, 15, 'F');
+    pdf.setTextColor('#FFFFFF');
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('PRICING BREAKDOWN', pageWidth / 2, yPosition + 10, { align: 'center' });
+    
+    yPosition += 20;
+    
+    // Table header
+    pdf.setFillColor(lightGray);
+    pdf.rect(20, yPosition, pageWidth - 40, 10, 'F');
+    pdf.setTextColor(textColor);
+    
+    pdf.text('Description', 25, yPosition + 7);
+    pdf.text('Quantity', 100, yPosition + 7);
+    pdf.text('Rate', 130, yPosition + 7);
+    pdf.text('Amount', 160, yPosition + 7);
+    
+    yPosition += 15;
+    
+    // Table content
+    pdf.setFont('helvetica', 'normal');
+    const total = quoteData.pricePerPlate * quoteData.guests;
+    
+    pdf.text('Banquet per plate', 25, yPosition);
+    pdf.text(quoteData.guests.toLocaleString('en-IN'), 100, yPosition);
+    pdf.text(formatCurrency(quoteData.pricePerPlate), 130, yPosition);
+    pdf.text(formatCurrency(total), 160, yPosition);
+    
+    yPosition += 20;
+    
+    // Total
+    pdf.setDrawColor(borderColor);
+    pdf.line(20, yPosition, pageWidth - 20, yPosition);
+    
+    yPosition += 10;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.text('Total Amount:', 120, yPosition);
+    pdf.text(formatCurrency(total), 160, yPosition);
+    
+    yPosition += 15;
+    
+    // Notes if available
+    if (quoteData.notes) {
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'italic');
+      pdf.text(`Notes: ${quoteData.notes}`, 20, yPosition, { maxWidth: pageWidth - 40 });
+      yPosition += 10;
+    }
+
+    // Terms and conditions
+    if (yPosition < pageHeight - 60) {
+      pdf.setDrawColor(borderColor);
+      pdf.line(20, yPosition, pageWidth - 20, yPosition);
+      
+      yPosition += 10;
+      pdf.setFontSize(9);
+      pdf.setTextColor('#666666');
+      pdf.setFont('helvetica', 'normal');
+      const terms = [
+        '• This quotation is valid for 30 days from the date of issue.',
+        '• Prices are subject to change based on market conditions.',
+        '• Advance booking amount is required to confirm the reservation.',
+        '• Cancellation policy: 50% refund if cancelled 30 days prior to the event.'
+      ];
+      
+      terms.forEach(term => {
+        if (yPosition < pageHeight - 20) {
+          pdf.text(term, 20, yPosition, { maxWidth: pageWidth - 40 });
+          yPosition += 5;
+        }
+      });
+    }
+
+    // Footer
+    pdf.setDrawColor(borderColor);
+    pdf.line(20, pageHeight - 30, pageWidth - 20, pageHeight - 30);
+    
+    pdf.setTextColor('#666666');
+    pdf.setFontSize(9);
+    pdf.text('Thank you for your business!', pageWidth / 2, pageHeight - 20, { align: 'center' });
+    pdf.text(`Copyright © ${new Date().getFullYear()} Shaadiplatform Pvt Ltd. • Generated on: ${new Date().toLocaleDateString('en-IN')}`, 
+             pageWidth / 2, pageHeight - 15, { align: 'center' });
+
+    // Save the PDF
+    const fileName = `${sanitizeFileName(banquet.name)}_quotation_${Date.now()}.pdf`;
+    pdf.save(fileName);
+  } catch (error) {
+    console.error('Error generating quotation PDF:', error);
+    throw new Error('Failed to generate quotation PDF');
   }
-
-  yPosition += 20;
-
-  // Pricing Details
-  pdf.setFontSize(16);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Pricing Details', 20, yPosition);
-  
-  yPosition += 15;
-  
-  // Table header
-  pdf.setFillColor(lightGray);
-  pdf.rect(20, yPosition - 5, pageWidth - 40, 10, 'F');
-  
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Description', 25, yPosition);
-  pdf.text('Quantity', 100, yPosition);
-  pdf.text('Rate', 130, yPosition);
-  pdf.text('Amount', 160, yPosition);
-  
-  yPosition += 15;
-  
-  // Table content
-  pdf.setFont('helvetica', 'normal');
-  const total = quoteData.pricePerPlate * quoteData.guests;
-  
-  pdf.text('Banquet per plate', 25, yPosition);
-  pdf.text(quoteData.guests.toString(), 100, yPosition);
-  pdf.text(`Rs ${quoteData.pricePerPlate}`, 130, yPosition);
-  pdf.text(`Rs ${total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`, 160, yPosition);
-  
-  yPosition += 15;
-  
-  // Total
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(14);
-  pdf.text('Total Amount:', 120, yPosition);
-  pdf.text(`Rs ${total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`, 156, yPosition);
-
-
-  // Footer
-  const footerY = pageHeight - 20;
-  pdf.setTextColor('#666666');
-  pdf.setFontSize(10);
-  pdf.text('Copyright © 2025 Shaadiplatform Pvt Ltd.', pageWidth / 2, footerY, { align: 'center' });
-  pdf.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, pageWidth / 2, footerY + 5, { align: 'center' });
-
-  // Save the PDF
-  const fileName = `${banquet.name.replace(/[^a-z0-9]/gi, '_')}_quotation_${Date.now()}.pdf`;
-  pdf.save(fileName);
 };
 
-export const generateGalleryPDF = async (banquetName: string, city: string, selectedImages: string[]) => {
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
+export const generateGalleryPDF = async (
+  banquetName: string, 
+  city: string, 
+  selectedImages: string[]
+): Promise<void> => {
+  try {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    await addWatermark(pdf, pageWidth, pageHeight);
+    const primaryColor = '#601220';
+    const secondaryColor = '#8D2B3E';
+    const textColor = '#2D2D2D';
+    const borderColor = '#DDDDDD';
 
-  const primaryColor = '#601220';
-  const textColor = '#2D2D2D';
+    // Header
+    pdf.setFillColor(primaryColor);
+    pdf.rect(0, 0, pageWidth, 40, 'F');
+    pdf.setTextColor('#FFFFFF');
+    pdf.setFontSize(24);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('BANQUET GALLERY', pageWidth / 2, 25, { align: 'center' });
 
-  // Header
-  pdf.setFillColor(primaryColor);
-  pdf.rect(0, 0, pageWidth, 30, 'F');
-  pdf.setTextColor('#FFFFFF');
-  pdf.setFontSize(24);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('RESTAURANT GALLERY', pageWidth / 2, 20, { align: 'center' });
+    let yPosition = 50;
 
-  let yPosition = 60;
+    // Venue info
+    pdf.setTextColor(textColor);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(banquetName, 20, yPosition);
+    yPosition += 8;
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Location: ${city}`, 20, yPosition);
+    yPosition += 15;
 
-  pdf.setTextColor(textColor);
-  pdf.setFontSize(18);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(`${banquetName} - Gallery`, 20, yPosition);
-  yPosition += 10;
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(`Location: ${city}`, 20, yPosition);
-
-  yPosition += 20;
-
-  // Add images to the gallery
-  for (const imageUrl of selectedImages) {
-    try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      const dataUrl = await new Promise(resolve => {
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
-      });
-
-      // Add image to PDF, adjust position and size as needed
-      // For simplicity, let's add one image per page or arrange them in a grid
-      // Here, I'll add them one by one, moving to a new page if necessary
-      const imgWidth = 180; // mm
-      const imgHeight = 120; // mm
-      const margin = 20;
-
-      if (yPosition + imgHeight + margin > pageHeight - 30) { // Check if image fits on current page
-        pdf.addPage();
-        yPosition = margin; // Reset yPosition for new page
-      }
-
-      // Determine image format from blob type
-      let imgFormat = 'JPEG'; // Default
-      if (blob.type.includes('png')) {
-        imgFormat = 'PNG';
-      } else if (blob.type.includes('jpeg')) {
-        imgFormat = 'JPEG';
-      } else if (blob.type.includes('webp')) {
-        imgFormat = 'WEBP';
-      }
+    // Add images to the gallery
+    const imgWidth = pageWidth - 40; // Full width with margins
+    const margin = 20;
+    
+    for (let i = 0; i < selectedImages.length; i++) {
+      const imageUrl = selectedImages[i];
       
-      console.log(`Adding image: ${imageUrl}, Format: ${imgFormat}`);
-      pdf.addImage(dataUrl as string, imgFormat, margin, yPosition, imgWidth, imgHeight);
-      yPosition += imgHeight + 10; // Move yPosition down for next image
-    } catch (error) {
-      console.error(`Failed to load image ${imageUrl}:`, error);
-      // Optionally add a placeholder or error message in the PDF
-      pdf.setTextColor('#FF0000');
-      pdf.setFontSize(10);
-      pdf.text(`Failed to load image: ${imageUrl}`, 20, yPosition);
-      yPosition += 10;
-      pdf.setTextColor(textColor); // Reset color
+      try {
+        const dataUrl = await loadImage(imageUrl);
+        
+        // Check if we need a new page
+        if (yPosition > pageHeight - 150) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        
+        // Get image dimensions to maintain aspect ratio
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise(resolve => {
+          img.onload = resolve;
+        });
+        
+        const aspectRatio = img.width / img.height;
+        const imgHeight = imgWidth / aspectRatio;
+        
+        // Add image to PDF
+        pdf.addImage(dataUrl, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+        yPosition += imgHeight + 10;
+        
+        // Add a caption if there's space
+        if (yPosition < pageHeight - 15) {
+          pdf.setFontSize(9);
+          pdf.setTextColor('#666666');
+          pdf.text(`Image ${i + 1} of ${selectedImages.length}`, pageWidth / 2, yPosition, { align: 'center' });
+          yPosition += 7;
+        }
+        
+      } catch (error) {
+        console.error(`Failed to add image ${imageUrl}:`, error);
+        // Add error message instead of image
+        pdf.setFontSize(10);
+        pdf.setTextColor('#FF0000');
+        pdf.text(`Failed to load image ${i + 1}`, margin, yPosition);
+        yPosition += 10;
+        pdf.setTextColor(textColor);
+      }
     }
+
+    // Footer
+    pdf.setDrawColor(borderColor);
+    pdf.line(20, pageHeight - 30, pageWidth - 20, pageHeight - 30);
+    
+    pdf.setTextColor('#666666');
+    pdf.setFontSize(9);
+    pdf.text(`Copyright © ${new Date().getFullYear()} Shaadiplatform Pvt Ltd. • Generated on: ${new Date().toLocaleDateString('en-IN')}`, 
+             pageWidth / 2, pageHeight - 15, { align: 'center' });
+
+    const fileName = `${sanitizeFileName(banquetName)}_gallery_${Date.now()}.pdf`;
+    pdf.save(fileName);
+  } catch (error) {
+    console.error('Error generating gallery PDF:', error);
+    throw new Error('Failed to generate gallery PDF');
   }
-
-  // Footer
-  const footerY = pageHeight - 20;
-  pdf.setTextColor('#666666');
-  pdf.setFontSize(10);
-  pdf.text('Copyright © 2025 Shaadiplatform Pvt Ltd.', pageWidth / 2, footerY, { align: 'center' });
-  pdf.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, pageWidth / 2, footerY + 5, { align: 'center' });
-
-  const fileName = `${banquetName.replace(/[^a-z0-9]/gi, '_')}_gallery_${Date.now()}.pdf`;
-  pdf.save(fileName);
 };
