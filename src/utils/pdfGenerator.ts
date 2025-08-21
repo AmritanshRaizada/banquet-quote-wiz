@@ -27,13 +27,23 @@ export const generateQuotationPDF = async (
   const pageHeight = pdf.internal.pageSize.getHeight();
   
   // Colors matching our theme
-  const primaryColor = '#B8860B'; // Gold color from our design
+  const primaryColor = '#601220';
   const textColor = '#2D2D2D';
   const lightGray = '#F5F5F5';
 
+  // Fetch and add logo
+  const response = await fetch('/B W Logo.png');
+  const blob = await response.blob();
+  const reader = new FileReader();
+  const dataUrl = await new Promise(resolve => {
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
   // Header
   pdf.setFillColor(primaryColor);
   pdf.rect(0, 0, pageWidth, 30, 'F');
+
+  pdf.addImage(dataUrl as string, 'PNG', 15, -5, 40, 40);
   
   pdf.setTextColor('#FFFFFF');
   pdf.setFontSize(24);
@@ -122,52 +132,104 @@ export const generateQuotationPDF = async (
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(14);
   pdf.text('Total Amount:', 120, yPosition);
-  pdf.text(`Rs ${total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`, 170, yPosition);
+  pdf.text(`Rs ${total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`, 156, yPosition);
 
-  // Images section if any images are selected
-  if (selectedImages.length > 0) {
-    yPosition += 30;
-    
-    if (yPosition > pageHeight - 60) {
-      pdf.addPage();
-      yPosition = 30;
-    }
-    
-    pdf.setFontSize(16);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Gallery', 20, yPosition);
-    
-    yPosition += 15;
-    
-    // Add placeholder for images (since we can't easily embed external URLs)
-    const imageWidth = 40;
-    const imageHeight = 30;
-    const imagesPerRow = 2;
-    
-    selectedImages.slice(0, 4).forEach((_, index) => {
-      const col = index % imagesPerRow;
-      const row = Math.floor(index / imagesPerRow);
+
+  // Footer
+  const footerY = pageHeight - 20;
+  pdf.setTextColor('#666666');
+  pdf.setFontSize(10);
+  pdf.text('Copyright © 2025 Shaadiplatform Pvt Ltd.', pageWidth / 2, footerY, { align: 'center' });
+  pdf.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, pageWidth / 2, footerY + 5, { align: 'center' });
+
+  // Save the PDF
+  const fileName = `${banquet.name.replace(/[^a-z0-9]/gi, '_')}_quotation_${Date.now()}.pdf`;
+  pdf.save(fileName);
+};
+
+export const generateGalleryPDF = async (banquetName: string, city: string, selectedImages: string[]) => {
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  const primaryColor = '#601220';
+  const textColor = '#2D2D2D';
+
+  // Header
+  pdf.setFillColor(primaryColor);
+  pdf.rect(0, 0, pageWidth, 30, 'F');
+  pdf.setTextColor('#FFFFFF');
+  pdf.setFontSize(24);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('RESTAURANT GALLERY', pageWidth / 2, 20, { align: 'center' });
+
+  let yPosition = 60;
+
+  pdf.setTextColor(textColor);
+  pdf.setFontSize(18);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(`${banquetName} - Gallery`, 20, yPosition);
+  yPosition += 10;
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`Location: ${city}`, 20, yPosition);
+
+  yPosition += 20;
+
+  // Add images to the gallery
+  for (const imageUrl of selectedImages) {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      const dataUrl = await new Promise(resolve => {
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+
+      // Add image to PDF, adjust position and size as needed
+      // For simplicity, let's add one image per page or arrange them in a grid
+      // Here, I'll add them one by one, moving to a new page if necessary
+      const imgWidth = 180; // mm
+      const imgHeight = 120; // mm
+      const margin = 20;
+
+      if (yPosition + imgHeight + margin > pageHeight - 30) { // Check if image fits on current page
+        pdf.addPage();
+        yPosition = margin; // Reset yPosition for new page
+      }
+
+      // Determine image format from blob type
+      let imgFormat = 'JPEG'; // Default
+      if (blob.type.includes('png')) {
+        imgFormat = 'PNG';
+      } else if (blob.type.includes('jpeg')) {
+        imgFormat = 'JPEG';
+      } else if (blob.type.includes('webp')) {
+        imgFormat = 'WEBP';
+      }
       
-      const x = 20 + col * (imageWidth + 10);
-      const y = yPosition + row * (imageHeight + 10);
-      
-      // Draw placeholder rectangle for image
-      pdf.setFillColor(lightGray);
-      pdf.rect(x, y, imageWidth, imageHeight, 'F');
-      pdf.setTextColor('#999999');
+      console.log(`Adding image: ${imageUrl}, Format: ${imgFormat}`);
+      pdf.addImage(dataUrl as string, imgFormat, margin, yPosition, imgWidth, imgHeight);
+      yPosition += imgHeight + 10; // Move yPosition down for next image
+    } catch (error) {
+      console.error(`Failed to load image ${imageUrl}:`, error);
+      // Optionally add a placeholder or error message in the PDF
+      pdf.setTextColor('#FF0000');
       pdf.setFontSize(10);
-      pdf.text(`Image ${index + 1}`, x + imageWidth / 2, y + imageHeight / 2, { align: 'center' });
-    });
+      pdf.text(`Failed to load image: ${imageUrl}`, 20, yPosition);
+      yPosition += 10;
+      pdf.setTextColor(textColor); // Reset color
+    }
   }
 
   // Footer
   const footerY = pageHeight - 20;
   pdf.setTextColor('#666666');
   pdf.setFontSize(10);
-  pdf.text('Generated by Banquet Quotation Maker', pageWidth / 2, footerY, { align: 'center' });
+  pdf.text('Copyright © 2025 Shaadiplatform Pvt Ltd.', pageWidth / 2, footerY, { align: 'center' });
   pdf.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, pageWidth / 2, footerY + 5, { align: 'center' });
 
-  // Save the PDF
-  const fileName = `${banquet.name.replace(/[^a-z0-9]/gi, '_')}_quotation_${Date.now()}.pdf`;
+  const fileName = `${banquetName.replace(/[^a-z0-9]/gi, '_')}_gallery_${Date.now()}.pdf`;
   pdf.save(fileName);
 };

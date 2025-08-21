@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { BanquetCard } from "@/components/ui/BanquetCard";
 import { QuoteForm } from "@/components/ui/QuoteForm";
 import { ImageSelector } from "@/components/ui/ImageSelector";
-import { generateQuotationPDF } from "@/utils/pdfGenerator";
+import { generateQuotationPDF, generateGalleryPDF } from "@/utils/pdfGenerator";
 import { Search, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,6 +41,7 @@ const Index = () => {
   const [selectedBanquet, setSelectedBanquet] = useState<Banquet | null>(null);
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [currentStep, setCurrentStep] = useState<Step>('search');
+  const [selectedImagesForGallery, setSelectedImagesForGallery] = useState<string[]>([]);
   const { toast } = useToast();
 
   const filteredBanquets = BANQUETS.filter(banquet =>
@@ -58,10 +59,11 @@ const Index = () => {
     setCurrentStep('images');
   };
 
-  const handleGeneratePDF = async (selectedImages: string[]) => {
+  const handleImagesSelectedForQuote = (images: string[]) => {
+    setSelectedImagesForGallery(images); // Update state with selected images
     if (selectedBanquet && quoteData) {
       try {
-        await generateQuotationPDF(selectedBanquet, quoteData, selectedImages);
+        generateQuotationPDF(selectedBanquet, quoteData, images);
         toast({
           title: "PDF Generated Successfully!",
           description: "Your quotation has been downloaded.",
@@ -76,6 +78,24 @@ const Index = () => {
     }
   };
 
+  const handleGenerateGalleryPDF = async (banquetName: string, city: string) => {
+    console.log("Generating Gallery PDF with images:", selectedImagesForGallery);
+    try {
+      await generateGalleryPDF(banquetName, city, selectedImagesForGallery);
+      toast({
+        title: "Gallery PDF Generated Successfully!",
+        description: "The restaurant gallery PDF has been downloaded.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error generating Gallery PDF",
+        description: "Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+
   const resetToSearch = () => {
     setCurrentStep('search');
     setSelectedBanquet(null);
@@ -89,10 +109,8 @@ const Index = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm">
-                S
-              </div>
-              <h1 className="text-2xl md:text-3xl font-bold">Banquet Quotation Maker</h1>
+              <img src="/Logo.png" alt="Logo" className="h-24 w-24" />
+              <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#601220' }}>Banquet Quotation Maker</h1>
             </div>
             {currentStep !== 'search' && (
               <Button 
@@ -173,8 +191,13 @@ const Index = () => {
             <ImageSelector
               banquetName={selectedBanquet.name}
               city={selectedBanquet.city}
-              onImagesSelected={handleGeneratePDF}
+              onImagesSelected={handleImagesSelectedForQuote} // Pass the new handler
             />
+            <div className="flex justify-center space-x-4 mt-8">
+              <Button onClick={() => handleGenerateGalleryPDF(selectedBanquet.name, selectedBanquet.city)} className="bg-blue-500 hover:bg-blue-600 text-white">
+                Generate Restaurant Gallery PDF
+              </Button>
+            </div>
           </div>
         )}
       </main>
