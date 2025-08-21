@@ -32,7 +32,7 @@ export const generateQuotationPDF = async (
   const lightGray = '#F5F5F5';
 
   // Fetch and add logo
-  const response = await fetch('/B W Logo.png');
+  const response = await fetch('/public/B W Logo.png');
   const blob = await response.blob();
   const reader = new FileReader();
   const dataUrl = await new Promise(resolve => {

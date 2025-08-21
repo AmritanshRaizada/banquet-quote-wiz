@@ -109,7 +109,7 @@ const Index = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <img src="/Logo.png" alt="Logo" className="h-24 w-24" />
+              <img src="/public/Logo.png" alt="Logo" className="h-24 w-24" />
               <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#601220' }}>Banquet Quotation Maker</h1>
             </div>
             {currentStep !== 'search' && (

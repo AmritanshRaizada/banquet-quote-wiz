@@ -14,9 +14,9 @@ interface ImageSelectorProps {
 
 // Mock image data for demonstration
 const MOCK_IMAGES = [
-  "/Logo.png",
-  "/B W Logo.png",
-  "/placeholder.svg",
+  "/public/Logo.png",
+  "/public/B W Logo.png",
+  "/public/placeholder.svg",
   "https://images.unsplash.com/photo-1519167758481-83f29ba5fe4e?w=300&h=200&fit=crop",
   "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop",
   "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=300&h=200&fit=crop",
