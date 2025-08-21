@@ -7,7 +7,7 @@
 @layer base {
   :root {
     --background: 35 100% 98%;
-    --foreground: 25 25% 15%;
+    --foreground: 349 68% 22%;
 
     --card: 0 0% 100%;
     --card-foreground: 25 25% 15%;
@@ -15,18 +15,18 @@
     --popover: 0 0% 100%;
     --popover-foreground: 25 25% 15%;
 
-    --primary: 35 65% 45%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 35 85% 65%;
+    --primary: 349 68% 22%;
+    --primary-foreground: 35 100% 96%;
+    --primary-glow: 349 45% 35%;
 
-    --secondary: 35 25% 92%;
-    --secondary-foreground: 25 25% 15%;
+    --secondary: 35 100% 96%;
+    --secondary-foreground: 349 68% 22%;
 
-    --muted: 35 15% 94%;
-    --muted-foreground: 25 15% 45%;
+    --muted: 35 25% 94%;
+    --muted-foreground: 349 25% 45%;
 
-    --accent: 35 45% 88%;
-    --accent-foreground: 25 25% 15%;
+    --accent: 35 45% 92%;
+    --accent-foreground: 349 68% 22%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
@@ -37,7 +37,7 @@
 
     /* Custom design tokens */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-hero: linear-gradient(135deg, hsl(35 65% 45%), hsl(35 85% 65%), hsl(45 75% 75%));
+    --gradient-hero: linear-gradient(135deg, hsl(349 68% 22%), hsl(349 45% 35%), hsl(35 100% 96%));
     --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.2);
     --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.3);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -71,9 +71,9 @@
     --popover: 25 25% 10%;
     --popover-foreground: 35 25% 90%;
 
-    --primary: 35 85% 65%;
-    --primary-foreground: 25 25% 8%;
-    --primary-glow: 35 65% 45%;
+    --primary: 349 68% 35%;
+    --primary-foreground: 35 100% 96%;
+    --primary-glow: 349 45% 45%;
 
     --secondary: 25 15% 15%;
     --secondary-foreground: 35 25% 90%;

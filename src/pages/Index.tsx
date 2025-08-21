@@ -5,8 +5,9 @@ import { BanquetCard } from "@/components/ui/BanquetCard";
 import { QuoteForm } from "@/components/ui/QuoteForm";
 import { ImageSelector } from "@/components/ui/ImageSelector";
 import { generateQuotationPDF } from "@/utils/pdfGenerator";
-import { Search, Crown, ArrowLeft } from "lucide-react";
+import { Search, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import logo from "@/assets/shaadi-platform-logo.png";
 
 interface Banquet {
   id: string;
@@ -89,7 +90,7 @@ const Index = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Crown className="h-8 w-8" />
+              <img src={logo} alt="Shaadi Platform Logo" className="h-8 w-8" />
               <h1 className="text-2xl md:text-3xl font-bold">Banquet Quotation Maker</h1>
             </div>
             {currentStep !== 'search' && (
