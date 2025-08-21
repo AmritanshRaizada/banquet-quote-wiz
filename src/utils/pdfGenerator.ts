@@ -121,8 +121,8 @@ export const generateQuotationPDF = async (
   // Total
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(14);
-  pdf.text('Total Amount:', 130, yPosition);
-  pdf.text(`Rs ${total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`, 160, yPosition);
+  pdf.text('Total Amount:', 120, yPosition);
+  pdf.text(`Rs ${total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`, 170, yPosition);
 
   // Images section if any images are selected
   if (selectedImages.length > 0) {
