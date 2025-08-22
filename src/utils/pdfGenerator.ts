@@ -369,51 +369,80 @@ export const generateGalleryPDF = async (
     // Add images to the gallery
     const imgWidth = pageWidth - 40; // Full width with margins
     const margin = 20;
+    let successfulImages = 0;
+    
+    console.log(`Starting to process ${selectedImages.length} images for PDF gallery`);
     
     for (let i = 0; i < selectedImages.length; i++) {
       const imageUrl = selectedImages[i];
+      console.log(`Processing image ${i + 1}: ${imageUrl}`);
       
       try {
-        const dataUrl = await loadImage(imageUrl);
+        const dataUrl = await loadImageWithFallback(imageUrl);
+        console.log(`Successfully loaded image ${i + 1}`);
         
         // Check if we need a new page
         if (yPosition > pageHeight - 150) {
           pdf.addPage();
           yPosition = 20;
+          await addWatermark(pdf, pageWidth, pageHeight);
         }
         
-        // Get image dimensions to maintain aspect ratio
-        const img = new Image();
-        img.src = dataUrl;
-        await new Promise(resolve => {
-          img.onload = resolve;
+        // Create a temporary image to get dimensions
+        const tempImg = document.createElement('img');
+        tempImg.src = dataUrl;
+        
+        await new Promise((resolve, reject) => {
+          tempImg.onload = () => {
+            try {
+              const aspectRatio = tempImg.width / tempImg.height;
+              let imgHeight = imgWidth / aspectRatio;
+              
+              // Limit image height to prevent overflow
+              const maxHeight = pageHeight - yPosition - 50;
+              if (imgHeight > maxHeight) {
+                imgHeight = maxHeight;
+              }
+              
+              // Add image to PDF
+              pdf.addImage(dataUrl, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+              yPosition += imgHeight + 15;
+              
+              // Add a caption
+              pdf.setFontSize(10);
+              pdf.setTextColor('#666666');
+              pdf.text(`Image ${i + 1} of ${selectedImages.length}`, pageWidth / 2, yPosition - 5, { align: 'center' });
+              
+              successfulImages++;
+              console.log(`Successfully added image ${i + 1} to PDF`);
+              resolve(true);
+            } catch (pdfError) {
+              console.error(`Error adding image ${i + 1} to PDF:`, pdfError);
+              reject(pdfError);
+            }
+          };
+          
+          tempImg.onerror = () => {
+            console.error(`Failed to load temp image ${i + 1}`);
+            reject(new Error('Failed to load image'));
+          };
         });
         
-        const aspectRatio = img.width / img.height;
-        const imgHeight = imgWidth / aspectRatio;
-        
-        // Add image to PDF
-        pdf.addImage(dataUrl, 'JPEG', margin, yPosition, imgWidth, imgHeight);
-        yPosition += imgHeight + 10;
-        
-        // Add a caption if there's space
-        if (yPosition < pageHeight - 15) {
-          pdf.setFontSize(9);
-          pdf.setTextColor('#666666');
-          pdf.text(`Image ${i + 1} of ${selectedImages.length}`, pageWidth / 2, yPosition, { align: 'center' });
-          yPosition += 7;
-        }
-        
       } catch (error) {
-        console.error(`Failed to add image ${imageUrl}:`, error);
-        // Add error message instead of image
-        pdf.setFontSize(10);
-        pdf.setTextColor('#FF0000');
-        pdf.text(`Failed to load image ${i + 1}`, margin, yPosition);
-        yPosition += 10;
+        console.error(`Failed to process image ${i + 1} (${imageUrl}):`, error);
+        
+        // Add placeholder for failed image
+        pdf.setFontSize(12);
+        pdf.setTextColor('#999999');
+        pdf.rect(margin, yPosition, imgWidth, 100, 'S');
+        pdf.text(`Image ${i + 1}`, pageWidth / 2, yPosition + 45, { align: 'center' });
+        pdf.text(`Unable to load`, pageWidth / 2, yPosition + 60, { align: 'center' });
+        yPosition += 115;
         pdf.setTextColor(textColor);
       }
     }
+    
+    console.log(`Successfully processed ${successfulImages} out of ${selectedImages.length} images`);
 
     // Footer
     pdf.setDrawColor(borderColor);
