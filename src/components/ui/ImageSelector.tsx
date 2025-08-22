@@ -12,20 +12,9 @@ interface ImageSelectorProps {
   onImagesSelected: (images: string[]) => void;
 }
 
-// Mock image data for demonstration
-const MOCK_IMAGES = [
-  "/public/Logo.png",
-  "/public/B W Logo.png",
-  "/public/placeholder.svg",
-  "https://images.unsplash.com/photo-1519167758481-83f29ba5fe4e?w=300&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=300&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=300&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1519167758481-83f29ba5fe4e?w=300&h=200&fit=crop&auto=format",
-  "https://images.unsplash.com/photo-1464207687429-7505649dae38?w=300&h=200&fit=crop"
-];
+// Google Custom Search API configuration
+const GOOGLE_API_KEY = "AIzaSyCdsHJvJ2ijLbuDGOvIpj5aJ9c9KEsmvIE";
+const GOOGLE_CX = "a721f5831654d4106";
 
 export const ImageSelector = ({ banquetName, city, onImagesSelected }: ImageSelectorProps) => {
   const [searchQuery, setSearchQuery] = useState(`${banquetName} ${city} banquet`);
@@ -36,11 +25,34 @@ export const ImageSelector = ({ banquetName, city, onImagesSelected }: ImageSele
 
   const searchImages = async () => {
     setIsSearching(true);
-    // Simulate API call delay
-    setTimeout(() => {
-      setSearchResults(MOCK_IMAGES);
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(searchQuery)}&searchType=image&num=10`
+      );
+      const data = await response.json();
+      
+      if (data.items) {
+        const imageUrls = data.items.map((item: any) => item.link);
+        setSearchResults(imageUrls);
+      } else {
+        setSearchResults([]);
+        toast({
+          title: "No images found",
+          description: "Try a different search term.",
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      toast({
+        title: "Search failed",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+      setSearchResults([]);
+    } finally {
       setIsSearching(false);
-    }, 1000);
+    }
   };
 
   const toggleImageSelection = (imageUrl: string) => {
