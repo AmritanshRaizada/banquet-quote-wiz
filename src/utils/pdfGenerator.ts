@@ -22,23 +22,110 @@ const formatCurrency = (amount: number): string => {
   return `Rs ${amount.toLocaleString('en-IN')}`;
 };
 
-// Utility function to load image with error handling
-const loadImage = async (url: string): Promise<string> => {
+// Utility function to load image with CORS handling and fallbacks
+const loadImageWithFallback = async (url: string): Promise<string> => {
+  // Method 1: Try direct fetch first
   try {
     const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error('Failed to read image'));
-      reader.readAsDataURL(blob);
-    });
+    if (response.ok) {
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read image'));
+        reader.readAsDataURL(blob);
+      });
+    }
   } catch (error) {
-    console.error(`Failed to load image: ${url}`, error);
-    throw error;
+    console.log(`Direct fetch failed for ${url}, trying alternative method:`, error);
   }
+
+  // Method 2: Try using Image element with crossOrigin and canvas conversion
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Could not get canvas context');
+        
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(dataUrl);
+      } catch (canvasError) {
+        console.log(`Canvas conversion failed for ${url}:`, canvasError);
+        // Method 3: Try CORS proxy as last resort
+        const proxyUrl = `https://cors-anywhere.herokuapp.com/${url}`;
+        loadImageDirect(proxyUrl).then(resolve).catch(() => {
+          // Final fallback: generate a placeholder
+          resolve(generatePlaceholderImage());
+        });
+      }
+    };
+    
+    img.onerror = () => {
+      console.log(`Image load failed for ${url}, trying CORS proxy`);
+      // Method 3: Try CORS proxy
+      const proxyUrl = `https://cors-anywhere.herokuapp.com/${url}`;
+      loadImageDirect(proxyUrl).then(resolve).catch(() => {
+        // Final fallback: generate a placeholder
+        resolve(generatePlaceholderImage());
+      });
+    };
+    
+    img.src = url;
+  });
+};
+
+// Direct image loading for proxy URLs
+const loadImageDirect = async (url: string): Promise<string> => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+  
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('Failed to read image'));
+    reader.readAsDataURL(blob);
+  });
+};
+
+// Generate a placeholder image when all methods fail
+const generatePlaceholderImage = (): string => {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+  
+  canvas.width = 400;
+  canvas.height = 300;
+  
+  // Draw a simple placeholder
+  ctx.fillStyle = '#f0f0f0';
+  ctx.fillRect(0, 0, 400, 300);
+  
+  ctx.fillStyle = '#999';
+  ctx.font = '20px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('Banquet Image', 200, 140);
+  ctx.fillText('Could not load', 200, 170);
+  
+  // Add a simple border
+  ctx.strokeStyle = '#ccc';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, 398, 298);
+  
+  return canvas.toDataURL('image/jpeg', 0.8);
+};
+
+// Utility function to load image with error handling (keeping for backwards compatibility)
+const loadImage = async (url: string): Promise<string> => {
+  return loadImageWithFallback(url);
 };
 const addWatermark = async (pdf: jsPDF, pageWidth: number, pageHeight: number): Promise<void> => {
   try {
