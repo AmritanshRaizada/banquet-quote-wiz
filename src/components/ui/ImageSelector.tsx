@@ -16,6 +16,20 @@ interface ImageSelectorProps {
 const GOOGLE_API_KEY = "AIzaSyCdsHJvJ2ijLbuDGOvIpj5aJ9c9KEsmvIE";
 const GOOGLE_CX = "a721f5831654d4106";
 
+// Fallback curated banquet images
+const FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1519167758481-83f29ba5fe4e?w=400&h=300&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=400&h=300&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400&h=300&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&h=300&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=400&h=300&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1464207687429-7505649dae38?w=400&h=300&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1543007630-9710e4a00a20?w=400&h=300&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400&h=300&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1555244162-803834f70033?w=400&h=300&fit=crop&auto=format"
+];
+
 export const ImageSelector = ({ banquetName, city, onImagesSelected }: ImageSelectorProps) => {
   const [searchQuery, setSearchQuery] = useState(`${banquetName} ${city} banquet`);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -34,6 +48,20 @@ export const ImageSelector = ({ banquetName, city, onImagesSelected }: ImageSele
       if (data.items) {
         const imageUrls = data.items.map((item: any) => item.link);
         setSearchResults(imageUrls);
+        toast({
+          title: "Images loaded",
+          description: `Found ${imageUrls.length} images via Google Search.`,
+          variant: "default"
+        });
+      } else if (data.error) {
+        // API error - fall back to curated images
+        console.log('Google API error, using fallback images:', data.error.message);
+        setSearchResults(FALLBACK_IMAGES);
+        toast({
+          title: "Using curated images",
+          description: "Google API not available. Showing quality banquet images.",
+          variant: "default"
+        });
       } else {
         setSearchResults([]);
         toast({
@@ -43,13 +71,14 @@ export const ImageSelector = ({ banquetName, city, onImagesSelected }: ImageSele
         });
       }
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('Search error, using fallback:', error);
+      // Network error - fall back to curated images
+      setSearchResults(FALLBACK_IMAGES);
       toast({
-        title: "Search failed",
-        description: "Please try again later.",
-        variant: "destructive"
+        title: "Using curated images",
+        description: "Search service unavailable. Showing quality banquet images.",
+        variant: "default"
       });
-      setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
