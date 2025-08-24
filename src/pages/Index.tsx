@@ -5,8 +5,9 @@ import { BanquetCard } from "@/components/ui/BanquetCard";
 import { QuoteForm } from "@/components/ui/QuoteForm";
 import { ImageSelector } from "@/components/ui/ImageSelector";
 import { generateQuotationPDF, generateGalleryPDF } from "@/utils/pdfGenerator";
-import { Search, ArrowLeft } from "lucide-react";
+import { Search, ArrowLeft, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 interface Banquet {
   id: string;
@@ -112,16 +113,27 @@ const Index = () => {
               <img src="/public/Logo.png" alt="Logo" className="h-24 w-24" />
               <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#601220' }}>Banquet Quotation Maker</h1>
             </div>
-            {currentStep !== 'search' && (
-              <Button 
-                variant="secondary"
-                onClick={resetToSearch}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Search
-              </Button>
-            )}
+            <div className="flex items-center space-x-4">
+              <Link to="/admin/login">
+                <Button 
+                  variant="secondary"
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Admin Login
+                </Button>
+              </Link>
+              {currentStep !== 'search' && (
+                <Button 
+                  variant="secondary"
+                  onClick={resetToSearch}
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Search
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </header>
