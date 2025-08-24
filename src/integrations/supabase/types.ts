@@ -20,6 +20,7 @@ export type Database = {
           client_name: string
           created_at: string
           description: string | null
+          hotel_name: string
           id: string
           updated_at: string
         }
@@ -28,6 +29,7 @@ export type Database = {
           client_name: string
           created_at?: string
           description?: string | null
+          hotel_name?: string
           id?: string
           updated_at?: string
         }
@@ -36,6 +38,7 @@ export type Database = {
           client_name?: string
           created_at?: string
           description?: string | null
+          hotel_name?: string
           id?: string
           updated_at?: string
         }

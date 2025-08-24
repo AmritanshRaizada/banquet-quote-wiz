@@ -17,6 +17,7 @@ interface Booking {
   id: string;
   booking_date: string;
   client_name: string;
+  hotel_name: string;
   description: string | null;
   created_at: string;
 }
@@ -24,10 +25,12 @@ interface Booking {
 const AdminDashboard = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [clientName, setClientName] = useState("");
+  const [hotelName, setHotelName] = useState("");
   const [description, setDescription] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [bookedDates, setBookedDates] = useState<Date[]>([]);
+  const [fullyBookedDates, setFullyBookedDates] = useState<Date[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,9 +55,23 @@ const AdminDashboard = () => {
       if (error) throw error;
 
       setBookings(data || []);
-      setBookedDates(
-        (data || []).map((booking) => new Date(booking.booking_date))
-      );
+      
+      // Group bookings by date to determine booking status
+      const bookingsByDate = (data || []).reduce((acc, booking) => {
+        const date = booking.booking_date;
+        acc[date] = (acc[date] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Set dates with any bookings (1 or 2)
+      const datesWithBookings = Object.keys(bookingsByDate).map(date => new Date(date));
+      setBookedDates(datesWithBookings);
+
+      // Set dates with 2 bookings (fully booked)
+      const fullyBooked = Object.entries(bookingsByDate)
+        .filter(([_, count]) => count >= 2)
+        .map(([date, _]) => new Date(date));
+      setFullyBookedDates(fullyBooked);
     } catch (error: any) {
       toast({
         title: "Error loading bookings",
@@ -80,10 +97,25 @@ const AdminDashboard = () => {
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedDate || !clientName.trim()) {
+    if (!selectedDate || !clientName.trim() || !hotelName.trim()) {
       toast({
         title: "Missing information",
-        description: "Please select a date and enter client name.",
+        description: "Please select a date and enter client name and hotel/banquet name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if date already has 2 bookings
+    const dateString = format(selectedDate, "yyyy-MM-dd");
+    const existingBookingsForDate = bookings.filter(
+      booking => booking.booking_date === dateString
+    );
+
+    if (existingBookingsForDate.length >= 2) {
+      toast({
+        title: "Date fully booked",
+        description: "This date already has 2 bookings. Maximum limit reached.",
         variant: "destructive",
       });
       return;
@@ -94,22 +126,13 @@ const AdminDashboard = () => {
       const { error } = await supabase
         .from("bookings")
         .insert({
-          booking_date: format(selectedDate, "yyyy-MM-dd"),
+          booking_date: dateString,
           client_name: clientName.trim(),
+          hotel_name: hotelName.trim(),
           description: description.trim() || null,
         });
 
-      if (error) {
-        if (error.code === "23505") { // Unique constraint violation
-          toast({
-            title: "Date already booked",
-            description: "This date is already booked for another marriage.",
-            variant: "destructive",
-          });
-          return;
-        }
-        throw error;
-      }
+      if (error) throw error;
 
       toast({
         title: "Booking created",
@@ -119,6 +142,7 @@ const AdminDashboard = () => {
       // Reset form
       setSelectedDate(undefined);
       setClientName("");
+      setHotelName("");
       setDescription("");
       
       // Reload bookings
@@ -199,18 +223,33 @@ const AdminDashboard = () => {
                     onSelect={setSelectedDate}
                     className="rounded-md border"
                     modifiers={{
-                      booked: bookedDates,
+                      partiallyBooked: bookedDates.filter(date => 
+                        !fullyBookedDates.some(fullDate => 
+                          fullDate.toDateString() === date.toDateString()
+                        )
+                      ),
+                      fullyBooked: fullyBookedDates,
                     }}
                     modifiersStyles={{
-                      booked: { 
+                      partiallyBooked: { 
+                        backgroundColor: "hsl(var(--warning))",
+                        color: "hsl(var(--warning-foreground))",
+                      },
+                      fullyBooked: { 
                         backgroundColor: "hsl(var(--destructive))",
                         color: "hsl(var(--destructive-foreground))",
                       },
                     }}
                   />
-                  <div className="mt-4 text-sm text-muted-foreground">
-                    <Badge variant="destructive" className="mr-2">●</Badge>
-                    Already booked dates
+                  <div className="mt-4 text-sm text-muted-foreground space-y-1">
+                    <div>
+                      <Badge variant="secondary" className="mr-2 bg-yellow-500 text-white">●</Badge>
+                      1 booking (1 slot available)
+                    </div>
+                    <div>
+                      <Badge variant="destructive" className="mr-2">●</Badge>
+                      2 bookings (fully booked)
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -238,6 +277,16 @@ const AdminDashboard = () => {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="hotelName">Hotel/Banquet Name *</Label>
+                      <Input
+                        id="hotelName"
+                        value={hotelName}
+                        onChange={(e) => setHotelName(e.target.value)}
+                        placeholder="Enter hotel or banquet name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="description">Description</Label>
                       <Textarea
                         id="description"
@@ -250,7 +299,7 @@ const AdminDashboard = () => {
                     <Button 
                       type="submit" 
                       className="w-full" 
-                      disabled={!selectedDate || !clientName.trim() || isLoading}
+                      disabled={!selectedDate || !clientName.trim() || !hotelName.trim() || isLoading}
                     >
                       {isLoading ? "Creating Booking..." : "Create Booking"}
                     </Button>
@@ -281,10 +330,13 @@ const AdminDashboard = () => {
                         className="flex items-center justify-between p-4 border rounded-lg"
                       >
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold">{booking.client_name}</h3>
                             <Badge variant="secondary">
                               {format(new Date(booking.booking_date), "PPP")}
+                            </Badge>
+                            <Badge variant="outline">
+                              {booking.hotel_name}
                             </Badge>
                           </div>
                           {booking.description && (
