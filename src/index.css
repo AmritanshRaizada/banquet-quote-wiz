@@ -31,6 +31,9 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
+    --warning: 142 76% 36%; /* A green for partially booked dates */
+    --warning-foreground: 142 76% 98%; /* Lighter text for contrast */
+
     --border: 35 20% 88%;
     --input: 0 0% 100%;
     --ring: 35 65% 45%;

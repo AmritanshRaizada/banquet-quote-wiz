@@ -19,6 +19,7 @@ interface Booking {
   client_name: string;
   hotel_name: string;
   description: string | null;
+  profit_percentage: number | null;
   created_at: string;
 }
 
@@ -27,6 +28,7 @@ const AdminDashboard = () => {
   const [clientName, setClientName] = useState("");
   const [hotelName, setHotelName] = useState("");
   const [description, setDescription] = useState("");
+  const [profitPercentage, setProfitPercentage] = useState<number | undefined>(undefined); // New state for profit percentage
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [bookedDates, setBookedDates] = useState<Date[]>([]);
@@ -130,6 +132,7 @@ const AdminDashboard = () => {
           client_name: clientName.trim(),
           hotel_name: hotelName.trim(),
           description: description.trim() || null,
+          profit_percentage: profitPercentage || null, // Include profit_percentage
         });
 
       if (error) throw error;
@@ -144,6 +147,7 @@ const AdminDashboard = () => {
       setClientName("");
       setHotelName("");
       setDescription("");
+      setProfitPercentage(undefined); // Reset profit percentage
       
       // Reload bookings
       loadBookings();
@@ -243,7 +247,7 @@ const AdminDashboard = () => {
                   />
                   <div className="mt-4 text-sm text-muted-foreground space-y-1">
                     <div>
-                      <Badge variant="secondary" className="mr-2 bg-yellow-500 text-white">●</Badge>
+                      <Badge variant="secondary" className="mr-2 bg-green-500 text-white">●</Badge>
                       1 booking (1 slot available)
                     </div>
                     <div>
@@ -296,6 +300,18 @@ const AdminDashboard = () => {
                         rows={3}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="profitPercentage">Profit %</Label>
+                      <Input
+                        id="profitPercentage"
+                        type="number"
+                        value={profitPercentage === undefined ? "" : profitPercentage}
+                        onChange={(e) => setProfitPercentage(parseInt(e.target.value) || undefined)}
+                        placeholder="Enter profit percentage (optional)"
+                        min="0"
+                        max="100"
+                      />
+                    </div>
                     <Button 
                       type="submit" 
                       className="w-full" 
@@ -338,6 +354,11 @@ const AdminDashboard = () => {
                             <Badge variant="outline">
                               {booking.hotel_name}
                             </Badge>
+                            {booking.profit_percentage !== null && (
+                              <Badge variant="secondary">
+                                Profit: {booking.profit_percentage}%
+                              </Badge>
+                            )}
                           </div>
                           {booking.description && (
                             <p className="text-sm text-muted-foreground">
