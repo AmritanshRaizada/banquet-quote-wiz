@@ -137,11 +137,13 @@ const addWatermark = async (pdf: jsPDF, pageWidth: number, pageHeight: number): 
     const y = (pageHeight - wmHeight) / 2;
 
     // Set transparency for watermark
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (pdf as any).setGState(new (pdf as any).GState({ opacity: 0.1 }));
 
     pdf.addImage(watermarkDataUrl, 'PNG', x, y, wmWidth, wmHeight);
 
     // Reset transparency back to normal
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (pdf as any).setGState(new (pdf as any).GState({ opacity: 1 }));
   } catch (error) {
     console.warn('Watermark not added:', error);
@@ -218,7 +220,15 @@ export const generateQuotationPDF = async (
     
     pdf.setFont('helvetica', 'normal');
     pdf.text(`Venue: ${banquet.name}`, col1, yPosition + 7);
-    pdf.text(`Location: ${banquet.city}`, col1, yPosition + 14);
+    const cityText = `Location: ${banquet.city}`;
+    const cityLines = pdf.splitTextToSize(cityText, 60); // Approx 25 chars width at font size 12
+    let currentCityY = yPosition + 14;
+    cityLines.forEach((line: string) => {
+      pdf.text(line, col1, currentCityY);
+      currentCityY += 7; // Line height
+    });
+    // Adjust yPosition for the next element based on the number of lines
+    yPosition += (cityLines.length - 1) * 7;
     pdf.text(`Capacity: Up to ${banquet.capacity.toLocaleString('en-IN')} guests`, col1, yPosition + 21);
     pdf.text(`Base Price: ${formatCurrency(banquet.basePrice)} per plate`, col1, yPosition + 28);
 
