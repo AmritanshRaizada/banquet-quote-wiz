@@ -25,15 +25,9 @@ export const BanquetCard = ({ banquet, onSelect }: BanquetCardProps) => {
             <MapPin className="h-4 w-4 mr-1" />
             <span>{banquet.city}</span>
           </div>
-          <div className="flex items-center text-muted-foreground">
-            <Users className="h-4 w-4 mr-1" />
-            <span>Up to {banquet.capacity} guests</span>
-          </div>
+         
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold text-primary">₹{banquet.basePrice}</div>
-          <div className="text-sm text-muted-foreground">per plate</div>
-        </div>
+       
       </div>
       <Button 
         onClick={() => onSelect(banquet)}
