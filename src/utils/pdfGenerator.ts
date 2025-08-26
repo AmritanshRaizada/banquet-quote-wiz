@@ -8,12 +8,16 @@ interface Banquet {
   basePrice: number;
 }
 
+interface Service {
+  description: string;
+  pax: number;
+  price: number;
+}
+
 interface QuoteData {
   clientName: string;
   eventDate: string;
-  pricePerPlate: number;
-  guests: number;
-  rooms: number;
+  services: Service[];
   notes: string;
 }
 
@@ -239,8 +243,6 @@ export const generateQuotationPDF = async (
     pdf.setFont('helvetica', 'normal');
     pdf.text(`Client Name: ${quoteData.clientName}`, col2, yPosition + 7);
     pdf.text(`Event Date: ${new Date(quoteData.eventDate).toLocaleDateString('en-IN')}`, col2, yPosition + 14);
-    pdf.text(`Guests: ${quoteData.guests.toLocaleString('en-IN')}`, col2, yPosition + 21);
-    pdf.text(`Rooms: ${quoteData.rooms}`, col2, yPosition + 28);
     
     yPosition += 40;
 
@@ -258,23 +260,30 @@ export const generateQuotationPDF = async (
     pdf.rect(20, yPosition, pageWidth - 40, 10, 'F');
     pdf.setTextColor(textColor);
     
-    pdf.text('Description', 25, yPosition + 7);
-    pdf.text('Quantity', 100, yPosition + 7);
-    pdf.text('Rate', 130, yPosition + 7);
-    pdf.text('Amount', 160, yPosition + 7);
+    pdf.text('SERVICES', 25, yPosition + 7);
+    pdf.text('No. of PAX', 100, yPosition + 7);
+    pdf.text('PRICE', 130, yPosition + 7);
+    pdf.text('AMOUNT', 160, yPosition + 7);
     
     yPosition += 15;
     
     // Table content
     pdf.setFont('helvetica', 'normal');
-    const total = quoteData.pricePerPlate * quoteData.guests;
+    let total = 0;
     
-    pdf.text('Banquet per plate', 25, yPosition);
-    pdf.text(quoteData.guests.toLocaleString('en-IN'), 100, yPosition);
-    pdf.text(formatCurrency(quoteData.pricePerPlate), 130, yPosition);
-    pdf.text(formatCurrency(total), 160, yPosition);
+    quoteData.services.forEach((service, index) => {
+      const serviceTotal = service.pax * service.price;
+      total += serviceTotal;
+      
+      pdf.text(service.description, 25, yPosition, { maxWidth: 70 });
+      pdf.text(service.pax.toLocaleString('en-IN'), 100, yPosition);
+      pdf.text(formatCurrency(service.price), 130, yPosition);
+      pdf.text(formatCurrency(serviceTotal), 160, yPosition);
+      
+      yPosition += 10;
+    });
     
-    yPosition += 20;
+    yPosition += 10;
     
     // Total
     pdf.setDrawColor(borderColor);

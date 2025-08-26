@@ -17,12 +17,16 @@ interface Banquet {
   basePrice: number;
 }
 
+interface Service {
+  description: string;
+  pax: number;
+  price: number;
+}
+
 interface QuoteData {
   clientName: string;
   eventDate: string;
-  pricePerPlate: number;
-  guests: number;
-  rooms: number;
+  services: Service[];
   notes: string;
 }
 

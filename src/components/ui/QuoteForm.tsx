@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, Users, Home, IndianRupee } from "lucide-react";
+import { Calendar, User, Plus, Trash2, IndianRupee } from "lucide-react";
 
 interface Banquet {
   id: string;
@@ -14,12 +14,16 @@ interface Banquet {
   basePrice: number;
 }
 
+interface Service {
+  description: string;
+  pax: number;
+  price: number;
+}
+
 interface QuoteData {
   clientName: string;
   eventDate: string;
-  pricePerPlate: number;
-  guests: number;
-  rooms: number;
+  services: Service[];
   notes: string;
 }
 
@@ -32,20 +36,55 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
   const [formData, setFormData] = useState<QuoteData>({
     clientName: "",
     eventDate: "",
-    pricePerPlate: banquet.basePrice,
-    guests: 100,
-    rooms: 1,
+    services: [
+      {
+        description: "Banquet per plate",
+        pax: 100,
+        price: banquet.basePrice
+      }
+    ],
     notes: ""
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.clientName && formData.eventDate && formData.pricePerPlate && formData.guests) {
-      onNext(formData);
+    if (formData.clientName && formData.eventDate && formData.services.length > 0) {
+      const hasValidServices = formData.services.every(service => 
+        service.description.trim() && service.pax > 0 && service.price > 0
+      );
+      if (hasValidServices) {
+        onNext(formData);
+      }
     }
   };
 
-  const total = formData.pricePerPlate * formData.guests;
+  const addService = () => {
+    setFormData({
+      ...formData,
+      services: [
+        ...formData.services,
+        { description: "", pax: 1, price: 0 }
+      ]
+    });
+  };
+
+  const removeService = (index: number) => {
+    if (formData.services.length > 1) {
+      setFormData({
+        ...formData,
+        services: formData.services.filter((_, i) => i !== index)
+      });
+    }
+  };
+
+  const updateService = (index: number, field: keyof Service, value: string | number) => {
+    const updatedServices = formData.services.map((service, i) => 
+      i === index ? { ...service, [field]: value } : service
+    );
+    setFormData({ ...formData, services: updatedServices });
+  };
+
+  const total = formData.services.reduce((sum, service) => sum + (service.pax * service.price), 0);
 
   return (
     <Card className="p-8 bg-card border border-border shadow-elegant animate-slide-up">
@@ -86,53 +125,82 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="pricePerPlate" className="flex items-center text-foreground">
-              <IndianRupee className="h-4 w-4 mr-2" />
-              Price per Plate *
-            </Label>
-            <Input
-              id="pricePerPlate"
-              type="number"
-              value={formData.pricePerPlate}
-              onChange={(e) => setFormData({ ...formData, pricePerPlate: parseInt(e.target.value) || 0 })}
-              min="1"
-              required
-              className="h-12 text-lg border-border focus:ring-primary"
-            />
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label className="text-foreground font-semibold">Services & Pricing</Label>
+            <Button 
+              type="button" 
+              onClick={addService}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Service
+            </Button>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="guests" className="flex items-center text-foreground">
-              <Users className="h-4 w-4 mr-2" />
-              Number of Guests *
-            </Label>
-            <Input
-              id="guests"
-              type="number"
-              value={formData.guests}
-              onChange={(e) => setFormData({ ...formData, guests: parseInt(e.target.value) || 0 })}
-              min="1"
-              max={banquet.capacity}
-              required
-              className="h-12 text-lg border-border focus:ring-primary"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="rooms" className="flex items-center text-foreground">
-              <Home className="h-4 w-4 mr-2" />
-              Rooms Required
-            </Label>
-            <Input
-              id="rooms"
-              type="number"
-              value={formData.rooms}
-              onChange={(e) => setFormData({ ...formData, rooms: parseInt(e.target.value) || 0 })}
-              min="0"
-              className="h-12 text-lg border-border focus:ring-primary"
-            />
-          </div>
+          {formData.services.map((service, index) => (
+            <Card key={index} className="p-4 bg-accent/30">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div className="md:col-span-2 space-y-2">
+                  <Label>Description of Service *</Label>
+                  <Input
+                    value={service.description}
+                    onChange={(e) => updateService(index, 'description', e.target.value)}
+                    placeholder="e.g., Banquet per plate, Photography, Decoration"
+                    required
+                    className="border-border focus:ring-primary"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Number of PAX *</Label>
+                  <Input
+                    type="number"
+                    value={service.pax}
+                    onChange={(e) => updateService(index, 'pax', parseInt(e.target.value) || 0)}
+                    min="1"
+                    required
+                    className="border-border focus:ring-primary"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Price *</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      value={service.price}
+                      onChange={(e) => updateService(index, 'price', parseInt(e.target.value) || 0)}
+                      min="0"
+                      required
+                      className="border-border focus:ring-primary"
+                    />
+                    {formData.services.length > 1 && (
+                      <Button
+                        type="button"
+                        onClick={() => removeService(index)}
+                        variant="outline"
+                        size="icon"
+                        className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-3 text-right">
+                <span className="text-sm text-muted-foreground">
+                  Subtotal: ₹{(service.pax * service.price).toLocaleString()}
+                </span>
+              </div>
+            </Card>
+          ))}
         </div>
 
         <div className="space-y-2">
@@ -151,9 +219,14 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
             <span className="font-medium text-foreground">Estimated Total:</span>
             <span className="font-bold text-primary text-2xl">₹{total.toLocaleString()}</span>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            {formData.guests} guests × ₹{formData.pricePerPlate} per plate
-          </p>
+          <div className="text-sm text-muted-foreground mt-2 space-y-1">
+            {formData.services.map((service, index) => (
+              <div key={index} className="flex justify-between">
+                <span>{service.description || `Service ${index + 1}`}:</span>
+                <span>{service.pax} × ₹{service.price} = ₹{(service.pax * service.price).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <Button 
