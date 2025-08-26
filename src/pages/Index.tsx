@@ -28,6 +28,8 @@ interface QuoteData {
   eventDate: string;
   services: Service[];
   notes: string;
+  gstIncluded: boolean;
+  gstPercentage: number;
 }
 
 const BANQUETS: Banquet[] = [

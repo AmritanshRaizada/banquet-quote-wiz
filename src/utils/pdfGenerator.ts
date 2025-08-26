@@ -19,6 +19,8 @@ interface QuoteData {
   eventDate: string;
   services: Service[];
   notes: string;
+  gstIncluded: boolean;
+  gstPercentage: number;
 }
 
 // Utility function to format currency
@@ -247,8 +249,12 @@ export const generateQuotationPDF = async (
     yPosition += 40;
 
     // Pricing Details
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (pdf as any).setGState(new (pdf as any).GState({ opacity: 0.89 }));
     pdf.setFillColor(secondaryColor);
     pdf.rect(20, yPosition, pageWidth - 40, 15, 'F');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (pdf as any).setGState(new (pdf as any).GState({ opacity: 1 }));
     pdf.setTextColor('#FFFFFF');
     pdf.setFont('helvetica', 'bold');
     pdf.text('PRICING BREAKDOWN', pageWidth / 2, yPosition + 10, { align: 'center' });
@@ -269,11 +275,11 @@ export const generateQuotationPDF = async (
     
     // Table content
     pdf.setFont('helvetica', 'normal');
-    let total = 0;
+    let subtotal = 0;
     
     quoteData.services.forEach((service, index) => {
       const serviceTotal = service.pax * service.price;
-      total += serviceTotal;
+      subtotal += serviceTotal;
       
       pdf.text(service.description, 25, yPosition, { maxWidth: 70 });
       pdf.text(service.pax.toLocaleString('en-IN'), 100, yPosition);
@@ -285,12 +291,28 @@ export const generateQuotationPDF = async (
     
     yPosition += 10;
     
-    // Total
+    // Subtotal
     pdf.setDrawColor(borderColor);
     pdf.line(20, yPosition, pageWidth - 20, yPosition);
     
     yPosition += 10;
     pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('Subtotal:', 120, yPosition);
+    pdf.text(formatCurrency(subtotal), 160, yPosition);
+
+    // GST
+    let gstAmount = 0;
+    if (quoteData.gstIncluded && quoteData.gstPercentage > 0) {
+      gstAmount = (subtotal * quoteData.gstPercentage) / 100;
+      yPosition += 7;
+      pdf.text(`GST (${quoteData.gstPercentage}%):`, 120, yPosition);
+      pdf.text(formatCurrency(gstAmount), 160, yPosition);
+    }
+
+    const total = subtotal + gstAmount;
+    
+    yPosition += 10;
     pdf.setFontSize(14);
     pdf.text('Total Amount:', 120, yPosition);
     pdf.text(formatCurrency(total), 160, yPosition);

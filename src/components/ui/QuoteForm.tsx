@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, User, Plus, Trash2, IndianRupee } from "lucide-react";
 
 interface Banquet {
@@ -25,6 +26,8 @@ interface QuoteData {
   eventDate: string;
   services: Service[];
   notes: string;
+  gstIncluded: boolean;
+  gstPercentage: number;
 }
 
 interface QuoteFormProps {
@@ -43,7 +46,9 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
         price: banquet.basePrice
       }
     ],
-    notes: ""
+    notes: "",
+    gstIncluded: false,
+    gstPercentage: 0
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -84,7 +89,9 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
     setFormData({ ...formData, services: updatedServices });
   };
 
-  const total = formData.services.reduce((sum, service) => sum + (service.pax * service.price), 0);
+  const subtotal = formData.services.reduce((sum, service) => sum + (service.pax * service.price), 0);
+  const gstAmount = formData.gstIncluded ? (subtotal * formData.gstPercentage) / 100 : 0;
+  const total = subtotal + gstAmount;
 
   return (
     <Card className="p-8 bg-card border border-border shadow-elegant animate-slide-up">
@@ -203,6 +210,31 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
           ))}
         </div>
 
+        <div className="flex items-center space-x-2 mb-4">
+          <Checkbox
+            id="gstIncluded"
+            checked={formData.gstIncluded}
+            onCheckedChange={(checked) => setFormData({ ...formData, gstIncluded: !!checked })}
+          />
+          <Label htmlFor="gstIncluded" className="text-foreground">GST INCLUDED</Label>
+        </div>
+
+        {formData.gstIncluded && (
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="gstPercentage" className="text-foreground">GST Percentage</Label>
+            <Input
+              id="gstPercentage"
+              type="number"
+              value={formData.gstPercentage}
+              onChange={(e) => setFormData({ ...formData, gstPercentage: parseFloat(e.target.value) || 0 })}
+              min="0"
+              max="100"
+              placeholder="Enter GST percentage"
+              className="border-border focus:ring-primary"
+            />
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="notes" className="text-foreground">Additional Notes</Label>
           <Textarea
@@ -226,6 +258,12 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
                 <span>{service.pax} × ₹{service.price} = ₹{(service.pax * service.price).toLocaleString()}</span>
               </div>
             ))}
+            {formData.gstIncluded && (
+              <div className="flex justify-between font-medium text-foreground">
+                <span>GST ({formData.gstPercentage}%):</span>
+                <span>₹{gstAmount.toLocaleString()}</span>
+              </div>
+            )}
           </div>
         </div>
 
