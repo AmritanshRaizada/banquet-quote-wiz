@@ -424,6 +424,7 @@ const Index = () => {
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [currentStep, setCurrentStep] = useState<Step>('search');
   const [selectedImagesForGallery, setSelectedImagesForGallery] = useState<string[]>([]);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const { toast } = useToast();
 
   const filteredBanquets = BANQUETS.filter(banquet =>
@@ -441,21 +442,46 @@ const Index = () => {
     setCurrentStep('images');
   };
 
-  const handleImagesSelectedForQuote = (images: string[]) => {
-    setSelectedImagesForGallery(images); // Update state with selected images
-    if (selectedBanquet && quoteData) {
+  const handleImagesSelectedForQuote = async (images: string[], isGalleryOnly?: boolean) => {
+    if (isGalleryOnly && selectedBanquet) {
+      // Generate gallery-only PDF
       try {
-        generateQuotationPDF(selectedBanquet, quoteData, images);
+        setIsGeneratingPDF(true);
+        await generateGalleryPDF(selectedBanquet.name, selectedBanquet.city, images);
         toast({
-          title: "PDF Generated Successfully!",
-          description: "Your quotation has been downloaded.",
+          title: "Gallery PDF generated successfully!",
+          description: "Your banquet gallery PDF has been downloaded.",
         });
       } catch (error) {
+        console.error('Gallery PDF generation error:', error);
         toast({
-          title: "Error generating PDF",
+          title: "Error generating gallery PDF",
           description: "Please try again.",
           variant: "destructive"
         });
+      } finally {
+        setIsGeneratingPDF(false);
+      }
+    } else {
+      // Regular quotation PDF
+      setSelectedImagesForGallery(images); // Update state with selected images
+      if (selectedBanquet && quoteData) {
+        try {
+          setIsGeneratingPDF(true);
+          await generateQuotationPDF(selectedBanquet, quoteData, images);
+          toast({
+            title: "PDF Generated Successfully!",
+            description: "Your quotation has been downloaded.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error generating PDF",
+            description: "Please try again.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsGeneratingPDF(false);
+        }
       }
     }
   };
@@ -584,13 +610,9 @@ const Index = () => {
             <ImageSelector
               banquetName={selectedBanquet.name}
               city={selectedBanquet.city}
-              onImagesSelected={handleImagesSelectedForQuote} // Pass the new handler
+              onImagesSelected={handleImagesSelectedForQuote}
+              isGeneratingPDF={isGeneratingPDF}
             />
-            <div className="flex justify-center space-x-4 mt-8">
-              <Button onClick={() => handleGenerateGalleryPDF(selectedBanquet.name, selectedBanquet.city)} className="bg-blue-500 hover:bg-blue-600 text-white">
-                Generate Restaurant Gallery PDF
-              </Button>
-            </div>
           </div>
         )}
       </main>
