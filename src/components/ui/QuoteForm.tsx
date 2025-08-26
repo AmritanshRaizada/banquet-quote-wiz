@@ -216,7 +216,7 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
             checked={formData.gstIncluded}
             onCheckedChange={(checked) => setFormData({ ...formData, gstIncluded: !!checked })}
           />
-          <Label htmlFor="gstIncluded" className="text-foreground">GST INCLUDED</Label>
+          <Label htmlFor="gstIncluded" className="text-foreground">GST% INCLUDED</Label>
         </div>
 
         {formData.gstIncluded && (
