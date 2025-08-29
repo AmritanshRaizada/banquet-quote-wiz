@@ -471,7 +471,252 @@ const BANQUETS: Banquet[] = [
   { id: "426", name: "Hotel Wings Grand", city: "near Kanyaiya Sweet,", capacity: 350, basePrice: 1500 },
   { id: "427", name: "Hotel Hallmark Alwar", city: "near radhika kunj dhiapaidi, Alwar,", capacity: 900, basePrice: 2700 },
   { id: "428", name: "Pavna Palace Hotel", city: "Shanti Kunj, Malviya Nagar, Alwar,", capacity: 450, basePrice: 3900 },
-  { id: "429", name: "Aditya Palace", city: "Matsya Industrial Area, Alwar", capacity: 700, basePrice: 1800 }
+  { id: "429", name: "Aditya Palace", city: "Matsya Industrial Area, Alwar", capacity: 700, basePrice: 1800 },
+  {
+    "id": "430",
+    "name": "Taj Exotica Resort & Spa, Goa",
+    "city": "Benaulim (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "431",
+    "name": "Grand Hyatt Goa",
+    "city": "Bambolim (Central)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "432",
+    "name": "W Goa",
+    "city": "Vagator (North)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "433",
+    "name": "Goa Marriott Resort & Spa",
+    "city": "Miramar, Panaji",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "434",
+    "name": "Taj Fort Aguada Resort & Spa",
+    "city": "Sinquerim (North)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "435",
+    "name": "Taj Holiday Village Resort & Spa",
+    "city": "Sinquerim (North)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "436",
+    "name": "Taj Cidade de Goa - Heritage",
+    "city": "Vainguinim, Dona Paula",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "437",
+    "name": "Taj Cidade de Goa - Horizon",
+    "city": "Dona Paula",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "438",
+    "name": "Radisson Blu Resort Goa",
+    "city": "Cavelossim (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "439",
+    "name": "Novotel Goa Dona Sylvia Resort",
+    "city": "Cavelossim (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "440",
+    "name": "Holiday Inn Resort Goa",
+    "city": "Mobor, Cavelossim",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "441",
+    "name": "The St. Regis Goa Resort",
+    "city": "Cavelossim (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "442",
+    "name": "ITC Grand Goa, A Luxury Collection Resort & Spa",
+    "city": "Arossim (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "443",
+    "name": "Alila Diwa Goa (Hyatt)",
+    "city": "Majorda (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "444",
+    "name": "Planet Hollywood Beach Resort Goa",
+    "city": "Utorda (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "445",
+    "name": "Kenilworth Resort & Spa",
+    "city": "Utorda (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "446",
+    "name": "Royal Orchid Beach Resort & Spa",
+    "city": "Utorda (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "447",
+    "name": "Zuri White Sands, Goa Resort & Casino",
+    "city": "Varca (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "448",
+    "name": "Caravela Beach Resort",
+    "city": "Varca (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "449",
+    "name": "The LaLiT Golf & Spa Resort Goa",
+    "city": "Raj Baga (Canacona)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "450",
+    "name": "DoubleTree by Hilton Goa–Panaji",
+    "city": "Kadamba Plateau (Old Goa Rd)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "451",
+    "name": "Hilton Goa Resort",
+    "city": "Saipem (Candolim)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "452",
+    "name": "Hyatt Centric Candolim Goa",
+    "city": "Candolim (North)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "453",
+    "name": "Bogmallo Beach Resort",
+    "city": "Bogmalo (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "454",
+    "name": "Stone Water Eco Resort",
+    "city": "Bogmallo/Issorcim (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "455",
+    "name": "Bay 15 - Cabanas by the Bay",
+    "city": "Odxel, Dona Paula",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "456",
+    "name": "La Cabana Beach & Spa Resort",
+    "city": "Ashwem (North)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "457",
+    "name": "Zeebop by the Sea",
+    "city": "Utorda (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "458",
+    "name": "Teso Waterfront",
+    "city": "Siolim (North)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "459",
+    "name": "Palácio do Deão (Heritage venue)",
+    "city": "Quepem (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "460",
+    "name": "Figueiredo Mansion (Heritage venue)",
+    "city": "Loutolim (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "461",
+    "name": "Quinta de Valadares",
+    "city": "Verna (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "462",
+    "name": "Planet Hollywood – 'Foxes Fiesta Lawn & Ballroom'",
+    "city": "Utorda (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "463",
+    "name": "ITC Grand Goa – 'Salao' & Lawns",
+    "city": "Arossim (South)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "464",
+    "name": "Cidade de Goa – 'Sala de Banquete/Alize'",
+    "city": "Dona Paula",
+    "capacity": 1000,
+    "basePrice": 5000
+  }
 ];
 
 
