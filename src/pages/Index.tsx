@@ -884,6 +884,20 @@ const BANQUETS: Banquet[] = [
     "city": "R-1, Knowledge Park II, Greater Noida 201306",
     "capacity": 1000,
     "basePrice": 5000
+  },
+   {
+    "id": "489",
+    "name": "Hyatt Regency Jaipur",
+    "city": "ISKCON Road, Mansarovar, Jaipur, Rajasthan 302020, India",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "490",
+    "name": "Hyatt Palace Jaipur",
+    "city": "Apex Circle, Malviya Nagar, Jaipur, Rajasthan 302017",
+    "capacity": 1000,
+    "basePrice": 5000
   }
 ];
 
