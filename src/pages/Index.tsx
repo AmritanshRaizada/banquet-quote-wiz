@@ -716,6 +716,174 @@ const BANQUETS: Banquet[] = [
     "city": "Dona Paula",
     "capacity": 1000,
     "basePrice": 5000
+  },
+  {
+    "id": "465",
+    "name": "Zorba the Buddha",
+    "city": "7, Tropical Drive, Mehrauli-Gurgaon Rd, Ghitorni, New Delhi 110030",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "466",
+    "name": "Tivoli Garden Resort Hotel (The Tivoli)",
+    "city": "Khasra No. 646-653, Chattarpur Mandir Rd, Chhattarpur, New Delhi 110068",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "467",
+    "name": "Amaara Farms",
+    "city": "Chattarpur, New Delhi 110074",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "468",
+    "name": "Mallu Farms",
+    "city": "204, Chattarpur Mandir Rd, Ansal Villas, Sat Bari, New Delhi 110074",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "469",
+    "name": "Udman by Ferns N Petals (Mahipalpur)",
+    "city": "NH-8, Adjacent to Shiv Murti, Mahipalpur, New Delhi 110037",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "470",
+    "name": "Atrio by Devam",
+    "city": "Rajokri, New Delhi 110038",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "471",
+    "name": "Golden Green (Pushpanjali Farms)",
+    "city": "F-16, Pushpanjali, Link Road, New Delhi 110037",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "472",
+    "name": "The Riviera by FNP Venues",
+    "city": "Ambience Island, Behind The Leela, DLF Phase 3, Gurugram 122002",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "473",
+    "name": "The Ritz by FNP Gardens",
+    "city": "Sector 24, Gurugram 122002",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "474",
+    "name": "The Riviera House (FNP Venues)",
+    "city": "Ambience Island/DLF Phase 3, Gurugram 122002",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "475",
+    "name": "Tikli Bottom",
+    "city": "Gairatpur Baas, Gurugram 122101, Haryana",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "476",
+    "name": "Prakash Farms (Manesar)",
+    "city": "Manesar, Gurugram, Haryana",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "477",
+    "name": "Farmhouse 301 (Sohna Road)",
+    "city": "Sohna Road, Gurugram 122102",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "478",
+    "name": "Farmhouse 6580 (Sohna Road)",
+    "city": "Sohna Road, Gurugram 122102",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "479",
+    "name": "Farmhouse 5454 (Aravali)",
+    "city": "Aravali Retreat, Gurugram",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "480",
+    "name": "Ambaram Farmhouse (Sohna Road)",
+    "city": "Sohna Road, Gurugram 122102",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "481",
+    "name": "Farmhouse 3012 (Sector 135)",
+    "city": "Sector 135, Noida 201304",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "482",
+    "name": "Preet Farm (Sector 135)",
+    "city": "Sector 135, Noida 201304",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "483",
+    "name": "Farmhouse 202 (Sector 135)",
+    "city": "Sector 135, Noida 201304",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "484",
+    "name": "DDLJ Farm (Sector 135)",
+    "city": "Sector 135, Noida 201304",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "485",
+    "name": "Naina Farms & Resort",
+    "city": "Noida (exact address on inquiry)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "486",
+    "name": "Bhati Farm House",
+    "city": "Greater Noida (contact for exact address)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "487",
+    "name": "Master Lakhiram Farm House",
+    "city": "Greater Noida (contact for exact address)",
+    "capacity": 1000,
+    "basePrice": 5000
+  },
+  {
+    "id": "488",
+    "name": "The Stellar Gymkhana",
+    "city": "R-1, Knowledge Park II, Greater Noida 201306",
+    "capacity": 1000,
+    "basePrice": 5000
   }
 ];
 
