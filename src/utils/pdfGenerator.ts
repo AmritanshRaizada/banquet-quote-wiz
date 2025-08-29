@@ -327,29 +327,6 @@ export const generateQuotationPDF = async (
       yPosition += 10;
     }
 
-    // Terms and conditions
-    if (yPosition < pageHeight - 60) {
-      pdf.setDrawColor(borderColor);
-      pdf.line(20, yPosition, pageWidth - 20, yPosition);
-      
-      yPosition += 10;
-      pdf.setFontSize(9);
-      pdf.setTextColor('#666666');
-      pdf.setFont('helvetica', 'normal');
-      const terms = [
-        '• This quotation is valid for 30 days from the date of issue.',
-        '• Prices are subject to change based on market conditions.',
-        '• Advance booking amount is required to confirm the reservation.',
-        '• Cancellation policy: 50% refund if cancelled 30 days prior to the event.'
-      ];
-      
-      terms.forEach(term => {
-        if (yPosition < pageHeight - 20) {
-          pdf.text(term, 20, yPosition, { maxWidth: pageWidth - 40 });
-          yPosition += 5;
-        }
-      });
-    }
 
     // Footer
     pdf.setDrawColor(borderColor);
@@ -491,7 +468,7 @@ export const generateGalleryPDF = async (
     
     pdf.setTextColor('#666666');
     pdf.setFontSize(9);
-    pdf.text(`Copyright © ${new Date().getFullYear()} Shaadiplatform Pvt Ltd. • Generated on: ${new Date().toLocaleDateString('en-IN')}`, 
+    pdf.text(`• Generated on: ${new Date().toLocaleDateString('en-IN')}`, 
              pageWidth / 2, pageHeight - 15, { align: 'center' });
 
     const fileName = `${sanitizeFileName(banquetName)}_gallery_${Date.now()}.pdf`;
