@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useState } from "react";
 import { QuoteForm } from "./components/ui/QuoteForm";
 import { ImageSelector } from "./components/ui/ImageSelector";
 import { generateQuotationPDF, QuoteData, Banquet } from "./utils/pdfGenerator"; // Import QuoteData and Banquet
@@ -12,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import { useToast } from "./hooks/use-toast";
+import { useState } from "react"; // Keep useState for QuoteFlow
 
 const queryClient = new QueryClient();
 
