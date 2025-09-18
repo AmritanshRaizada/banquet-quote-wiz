@@ -17,6 +17,7 @@ interface Service {
 interface QuoteData {
   clientName: string;
   venueName: string;
+  location: string;
   eventDate: string;
   services: Service[];
   notes: string;
@@ -226,16 +227,16 @@ export const generateQuotationPDF = async (
     pdf.text('Venue Details', col1, yPosition);
     
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Venue: ${banquet.name}`, col1, yPosition + 7);
-    const cityText = `Location: ${banquet.city}`;
-    const cityLines = pdf.splitTextToSize(cityText, 60); // Approx 25 chars width at font size 12
-    let currentCityY = yPosition + 14;
-    cityLines.forEach((line: string) => {
-      pdf.text(line, col1, currentCityY);
-      currentCityY += 7; // Line height
+    pdf.text(`Venue: ${quoteData.venueName}`, col1, yPosition + 7);
+    const locationText = `Location: ${quoteData.location}`;
+    const locationLines = pdf.splitTextToSize(locationText, 60); // Approx 25 chars width at font size 12
+    let currentLocationY = yPosition + 14;
+    locationLines.forEach((line: string) => {
+      pdf.text(line, col1, currentLocationY);
+      currentLocationY += 7; // Line height
     });
     // Adjust yPosition for the next element based on the number of lines
-    yPosition += (cityLines.length - 1) * 7;
+    yPosition += (locationLines.length - 1) * 7;
     pdf.text(`Capacity: Up to ${banquet.capacity.toLocaleString('en-IN')} guests`, col1, yPosition + 21);
     pdf.text(`Base Price: ${formatCurrency(banquet.basePrice)} per plate`, col1, yPosition + 28);
 
@@ -245,8 +246,7 @@ export const generateQuotationPDF = async (
     
     pdf.setFont('helvetica', 'normal');
     pdf.text(`Client Name: ${quoteData.clientName}`, col2, yPosition + 7);
-    pdf.text(`Venue Name: ${quoteData.venueName}`, col2, yPosition + 14);
-    pdf.text(`Event Date: ${new Date(quoteData.eventDate).toLocaleDateString('en-IN')}`, col2, yPosition + 21);
+    pdf.text(`Event Date: ${new Date(quoteData.eventDate).toLocaleDateString('en-IN')}`, col2, yPosition + 14);
     
     yPosition += 40;
 

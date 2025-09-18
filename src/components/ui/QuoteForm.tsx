@@ -24,6 +24,7 @@ interface Service {
 interface QuoteData {
   clientName: string;
   venueName: string;
+  location: string;
   eventDate: string;
   services: Service[];
   notes: string;
@@ -40,6 +41,7 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
   const [formData, setFormData] = useState<QuoteData>({
     clientName: "",
     venueName: "",
+    location: "",
     eventDate: "",
     services: [
       {
@@ -55,7 +57,7 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.clientName && formData.venueName && formData.eventDate && formData.services.length > 0) {
+    if (formData.clientName && formData.venueName && formData.location && formData.eventDate && formData.services.length > 0) {
       const hasValidServices = formData.services.every(service => 
         service.description.trim() && service.pax > 0 && service.price > 0
       );
@@ -135,19 +137,36 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="eventDate" className="flex items-center text-foreground">
-            <Calendar className="h-4 w-4 mr-2" />
-            Event Date *
-          </Label>
-          <Input
-            id="eventDate"
-            type="date"
-            value={formData.eventDate}
-            onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-            required
-            className="h-12 text-lg border-border focus:ring-primary"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="location" className="flex items-center text-foreground">
+              <User className="h-4 w-4 mr-2" />
+              Location *
+            </Label>
+            <Input
+              id="location"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              placeholder="Enter location/address"
+              required
+              className="h-12 text-lg border-border focus:ring-primary"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="eventDate" className="flex items-center text-foreground">
+              <Calendar className="h-4 w-4 mr-2" />
+              Event Date *
+            </Label>
+            <Input
+              id="eventDate"
+              type="date"
+              value={formData.eventDate}
+              onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+              required
+              className="h-12 text-lg border-border focus:ring-primary"
+            />
+          </div>
         </div>
 
         <div className="space-y-4">
