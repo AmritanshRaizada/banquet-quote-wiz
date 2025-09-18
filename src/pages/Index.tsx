@@ -25,6 +25,7 @@ interface Service {
 
 interface QuoteData {
   clientName: string;
+  venueName: string;
   eventDate: string;
   services: Service[];
   notes: string;

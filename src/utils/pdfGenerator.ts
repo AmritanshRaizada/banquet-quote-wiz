@@ -16,6 +16,7 @@ interface Service {
 
 interface QuoteData {
   clientName: string;
+  venueName: string;
   eventDate: string;
   services: Service[];
   notes: string;
@@ -244,7 +245,8 @@ export const generateQuotationPDF = async (
     
     pdf.setFont('helvetica', 'normal');
     pdf.text(`Client Name: ${quoteData.clientName}`, col2, yPosition + 7);
-    pdf.text(`Event Date: ${new Date(quoteData.eventDate).toLocaleDateString('en-IN')}`, col2, yPosition + 14);
+    pdf.text(`Venue Name: ${quoteData.venueName}`, col2, yPosition + 14);
+    pdf.text(`Event Date: ${new Date(quoteData.eventDate).toLocaleDateString('en-IN')}`, col2, yPosition + 21);
     
     yPosition += 40;
 
