@@ -237,8 +237,6 @@ export const generateQuotationPDF = async (
     });
     // Adjust yPosition for the next element based on the number of lines
     yPosition += (locationLines.length - 1) * 7;
-    pdf.text(`Capacity: Up to ${banquet.capacity.toLocaleString('en-IN')} guests`, col1, yPosition + 21);
-    pdf.text(`Base Price: ${formatCurrency(banquet.basePrice)} per plate`, col1, yPosition + 28);
 
     // Client Information
     pdf.setFont('helvetica', 'bold');
@@ -341,7 +339,7 @@ export const generateQuotationPDF = async (
              pageWidth / 2, pageHeight - 15, { align: 'center' });
 
     // Save the PDF
-    const fileName = `${sanitizeFileName(banquet.name)}_quotation_${Date.now()}.pdf`;
+    const fileName = `${sanitizeFileName(quoteData.venueName)}_quotation_${Date.now()}.pdf`;
     pdf.save(fileName);
   } catch (error) {
     console.error('Error generating quotation PDF:', error);
