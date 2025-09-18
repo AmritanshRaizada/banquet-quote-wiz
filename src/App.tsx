@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useState } from "react";
 import { QuoteForm } from "./components/ui/QuoteForm";
 import { ImageSelector } from "./components/ui/ImageSelector";
-import { generateQuotationPDF } from "./utils/pdfGenerator";
+import { generateQuotationPDF, QuoteData, Banquet } from "./utils/pdfGenerator"; // Import QuoteData and Banquet
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
@@ -14,31 +14,6 @@ import AdminDashboard from "./pages/AdminDashboard";
 import { useToast } from "./hooks/use-toast";
 
 const queryClient = new QueryClient();
-
-interface Service {
-  description: string;
-  pax: number;
-  price: number;
-}
-
-interface QuoteData {
-  clientName: string;
-  venueName: string;
-  location: string;
-  eventDate: string;
-  services: Service[];
-  notes: string;
-  gstIncluded: boolean;
-  gstPercentage: number;
-}
-
-interface Banquet {
-  id: string;
-  name: string;
-  city: string;
-  capacity: number;
-  basePrice: number;
-}
 
 const QuoteFlow = () => {
   const { toast } = useToast();

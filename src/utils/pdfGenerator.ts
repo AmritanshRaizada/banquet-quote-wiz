@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 
-interface Banquet {
+export interface Banquet {
   id: string;
   name: string;
   city: string;
@@ -14,7 +14,7 @@ interface Service {
   price: number;
 }
 
-interface QuoteData {
+export interface QuoteData {
   clientName: string;
   venueName: string;
   location: string;
@@ -135,29 +135,6 @@ const generatePlaceholderImage = (): string => {
 const loadImage = async (url: string): Promise<string> => {
   return loadImageWithFallback(url);
 };
-const addWatermark = async (pdf: jsPDF, pageWidth: number, pageHeight: number): Promise<void> => {
-  try {
-    const watermarkDataUrl = await loadImage('/public/Logo.png'); // your watermark image
-
-    const wmWidth = pageWidth * 0.5;   // watermark covers ~50% page width
-    const wmHeight = wmWidth;          // make it square
-    const x = (pageWidth - wmWidth) / 2;
-    const y = (pageHeight - wmHeight) / 2;
-
-    // Set transparency for watermark
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (pdf as any).setGState(new (pdf as any).GState({ opacity: 0.1 }));
-
-    pdf.addImage(watermarkDataUrl, 'PNG', x, y, wmWidth, wmHeight);
-
-    // Reset transparency back to normal
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (pdf as any).setGState(new (pdf as any).GState({ opacity: 1 }));
-  } catch (error) {
-    console.warn('Watermark not added:', error);
-  }
-};
-
 // Utility function to sanitize filename
 const sanitizeFileName = (name: string): string => {
   return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -173,7 +150,6 @@ export const generateQuotationPDF = async (
     
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    await addWatermark(pdf, pageWidth, pageHeight);
     // Colors matching our theme
     const primaryColor = '#601220';
     const secondaryColor = '#8D2B3E';
@@ -357,7 +333,6 @@ export const generateGalleryPDF = async (
     
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    await addWatermark(pdf, pageWidth, pageHeight);
     const primaryColor = '#601220';
     const secondaryColor = '#8D2B3E';
     const textColor = '#2D2D2D';
@@ -403,7 +378,6 @@ export const generateGalleryPDF = async (
         if (yPosition > pageHeight - 150) {
           pdf.addPage();
           yPosition = 20;
-          await addWatermark(pdf, pageWidth, pageHeight);
         }
         
         // Create a temporary image to get dimensions

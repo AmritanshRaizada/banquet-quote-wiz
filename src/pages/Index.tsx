@@ -25,8 +25,6 @@ interface Service {
 
 interface QuoteData {
   clientName: string;
-  venueName: string;
-  location: string;
   eventDate: string;
   services: Service[];
   notes: string;
@@ -1115,4 +1113,5 @@ const Index = () => {
   );
 };
 
+export default Index;
 export default Index;
