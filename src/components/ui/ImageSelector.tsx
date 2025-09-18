@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Image as ImageIcon, Check, Upload } from "lucide-react";
+import { Search, Image as ImageIcon, Check, Upload, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUploader } from "@/components/ui/ImageUploader";
 
@@ -13,6 +13,7 @@ interface ImageSelectorProps {
   city: string;
   onImagesSelected: (images: string[], isGalleryOnly?: boolean) => void;
   isGeneratingPDF?: boolean;
+  onBack?: () => void;
 }
 
 // Google Custom Search API configuration
@@ -33,7 +34,7 @@ const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1555244162-803834f70033?w=400&h=300&fit=crop&auto=format"
 ];
 
-export const ImageSelector = ({ banquetName, city, onImagesSelected, isGeneratingPDF = false }: ImageSelectorProps) => {
+export const ImageSelector = ({ banquetName, city, onImagesSelected, isGeneratingPDF = false, onBack }: ImageSelectorProps) => {
   const [searchQuery, setSearchQuery] = useState(`${banquetName} ${city} banquet`);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<string[]>([]);
@@ -125,6 +126,19 @@ export const ImageSelector = ({ banquetName, city, onImagesSelected, isGeneratin
 
   return (
     <Card className="p-8 bg-card border border-border shadow-elegant animate-slide-up">
+      {onBack && (
+        <div className="mb-6">
+          <Button 
+            onClick={onBack}
+            variant="ghost" 
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Quote Form
+          </Button>
+        </div>
+      )}
+      
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-2">Select Images</h2>
         <p className="text-muted-foreground">Choose up to 10 images for your quotation</p>
