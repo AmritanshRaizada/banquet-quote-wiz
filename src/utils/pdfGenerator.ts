@@ -174,7 +174,7 @@ export const generateQuotationPDF = async (
     pdf.setTextColor('#FFFFFF');
     pdf.setFontSize(24);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Proforma Invoice', pageWidth / 2, 30, { align: 'center' });
+    pdf.text('PROFORMA INVOICE', pageWidth / 2, 30, { align: 'center' });
 
     // Company info
     pdf.setFontSize(10);
