@@ -44,9 +44,7 @@ const QuoteFlow = () => {
         title: "PDF Generated Successfully!",
         description: "Your quotation has been downloaded.",
       });
-      // Reset to form step after successful PDF generation
-      setCurrentStep('form');
-      setQuoteData(null);
+      // Stay on image selection page after PDF generation
     } catch (error) {
       toast({
         title: "Error generating PDF",
