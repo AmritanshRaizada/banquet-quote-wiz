@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QuoteForm } from "./components/ui/QuoteForm";
 import { ImageSelector } from "./components/ui/ImageSelector";
-import { generateQuotationPDF, QuoteData, Banquet } from "./utils/pdfGenerator"; // Import QuoteData and Banquet
+import { generateQuotationPDF, QuoteData, Banquet } from "./utils/pdfGenerator";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
@@ -34,16 +34,27 @@ const QuoteFlow = () => {
     setCurrentStep('images');
   };
 
-  const handleImageNext = async (images: string[]) => {
-    if (!quoteData) return;
-    
+  const handleImageNext = async (images: string[], isGalleryOnly?: boolean) => {
     try {
       setIsGeneratingPDF(true);
-      await generateQuotationPDF(defaultBanquet, quoteData, images);
-      toast({
-        title: "PDF Generated Successfully!",
-        description: "Your quotation has been downloaded.",
-      });
+      
+      if (isGalleryOnly) {
+        // Generate gallery PDF with just the images
+        const { generateGalleryPDF } = await import("./utils/pdfGenerator");
+        await generateGalleryPDF(quoteData?.venueName || defaultBanquet.name, quoteData?.location || defaultBanquet.city, images);
+        toast({
+          title: "Gallery PDF Generated Successfully!",
+          description: "Your image gallery has been downloaded.",
+        });
+      } else {
+        // Generate quotation PDF with quote data and images
+        if (!quoteData) return;
+        await generateQuotationPDF(defaultBanquet, quoteData, images);
+        toast({
+          title: "Quotation PDF Generated Successfully!",
+          description: "Your quotation has been downloaded.",
+        });
+      }
       // Stay on image selection page after PDF generation
     } catch (error) {
       toast({
