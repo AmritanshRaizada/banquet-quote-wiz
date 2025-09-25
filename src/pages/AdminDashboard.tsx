@@ -8,30 +8,37 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, addDays, eachDayOfInterval } from "date-fns";
 import { LogOut, Calendar as CalendarIcon, Users } from "lucide-react";
 
 interface Booking {
   id: string;
   booking_date: string;
+  end_date?: string;
   client_name: string;
   hotel_name: string;
   description: string | null;
+  destination_wedding?: boolean;
   created_at: string;
   updated_at: string;
 }
 
 const AdminDashboard = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [dateSelectionMode, setDateSelectionMode] = useState<'start' | 'end'>('start');
   const [clientName, setClientName] = useState("");
   const [hotelName, setHotelName] = useState("");
   const [description, setDescription] = useState("");
+  const [isDestinationWedding, setIsDestinationWedding] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [bookedDates, setBookedDates] = useState<Date[]>([]);
   const [fullyBookedDates, setFullyBookedDates] = useState<Date[]>([]);
+  const [destinationWeddingDates, setDestinationWeddingDates] = useState<Date[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -59,8 +66,17 @@ const AdminDashboard = () => {
       
       // Group bookings by date to determine booking status
       const bookingsByDate = (data || []).reduce((acc, booking) => {
-        const date = booking.booking_date;
-        acc[date] = (acc[date] || 0) + 1;
+        // Handle date ranges for each booking
+        const startBookingDate = new Date(booking.booking_date);
+        const endBookingDate = booking.end_date ? new Date(booking.end_date) : startBookingDate;
+        
+        const bookingDates = eachDayOfInterval({ start: startBookingDate, end: endBookingDate });
+        
+        bookingDates.forEach(date => {
+          const dateString = format(date, 'yyyy-MM-dd');
+          acc[dateString] = (acc[dateString] || 0) + 1;
+        });
+        
         return acc;
       }, {} as Record<string, number>);
 
@@ -73,6 +89,18 @@ const AdminDashboard = () => {
         .filter(([_, count]) => count >= 2)
         .map(([date, _]) => new Date(date));
       setFullyBookedDates(fullyBooked);
+
+      // Set destination wedding dates (for blue highlighting)
+      const destinationDates: Date[] = [];
+      (data || []).forEach(booking => {
+        if (booking.destination_wedding) {
+          const startBookingDate = new Date(booking.booking_date);
+          const endBookingDate = booking.end_date ? new Date(booking.end_date) : startBookingDate;
+          const bookingDates = eachDayOfInterval({ start: startBookingDate, end: endBookingDate });
+          destinationDates.push(...bookingDates);
+        }
+      });
+      setDestinationWeddingDates(destinationDates);
     } catch (error: any) {
       toast({
         title: "Error loading bookings",
@@ -95,28 +123,69 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    
+    if (dateSelectionMode === 'start') {
+      setStartDate(date);
+      setEndDate(undefined);
+      setDateSelectionMode('end');
+      toast({
+        title: "Start date selected",
+        description: `Selected ${format(date, "PPP")}. Now select an end date.`,
+      });
+    } else {
+      if (startDate && date >= startDate) {
+        setEndDate(date);
+        setDateSelectionMode('start');
+        toast({
+          title: "Date range selected",
+          description: `Selected ${format(startDate, "PPP")} to ${format(date, "PPP")}`,
+        });
+      } else {
+        toast({
+          title: "Invalid date selection",
+          description: "End date must be after start date. Please select a valid end date.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedDate || !clientName.trim() || !hotelName.trim()) {
+    if (!startDate || !endDate || !clientName.trim() || !hotelName.trim()) {
       toast({
         title: "Missing information",
-        description: "Please select a date and enter client name and hotel/banquet name.",
+        description: "Please select start and end dates, and enter client name and hotel/banquet name.",
         variant: "destructive",
       });
       return;
     }
 
-    // Check if date already has 2 bookings
-    const dateString = format(selectedDate, "yyyy-MM-dd");
-    const existingBookingsForDate = bookings.filter(
-      booking => booking.booking_date === dateString
-    );
+    // Check if any date in the range already has 2 bookings
+    const selectedDates = eachDayOfInterval({ start: startDate, end: endDate });
+    const conflictingDates: string[] = [];
+    
+    selectedDates.forEach(date => {
+      const dateString = format(date, "yyyy-MM-dd");
+      const existingBookingsForDate = bookings.filter(booking => {
+        const bookingStart = new Date(booking.booking_date);
+        const bookingEnd = booking.end_date ? new Date(booking.end_date) : bookingStart;
+        const bookingDates = eachDayOfInterval({ start: bookingStart, end: bookingEnd });
+        return bookingDates.some(bookingDate => format(bookingDate, "yyyy-MM-dd") === dateString);
+      });
+      
+      if (existingBookingsForDate.length >= 2) {
+        conflictingDates.push(format(date, "PPP"));
+      }
+    });
 
-    if (existingBookingsForDate.length >= 2) {
+    if (conflictingDates.length > 0) {
       toast({
-        title: "Date fully booked",
-        description: "This date already has 2 bookings. Maximum limit reached.",
+        title: "Date range conflicts",
+        description: `These dates are fully booked: ${conflictingDates.join(", ")}`,
         variant: "destructive",
       });
       return;
@@ -127,24 +196,29 @@ const AdminDashboard = () => {
       const { error } = await supabase
         .from("bookings")
         .insert({
-          booking_date: dateString,
+          booking_date: format(startDate, "yyyy-MM-dd"),
+          end_date: format(endDate, "yyyy-MM-dd"),
           client_name: clientName.trim(),
           hotel_name: hotelName.trim(),
           description: description.trim() || null,
+          destination_wedding: isDestinationWedding,
         });
 
       if (error) throw error;
 
       toast({
         title: "Booking created",
-        description: `Marriage booking for ${format(selectedDate, "PPP")} has been added.`,
+        description: `Marriage booking from ${format(startDate, "PPP")} to ${format(endDate, "PPP")} has been added.`,
       });
 
       // Reset form
-      setSelectedDate(undefined);
+      setStartDate(undefined);
+      setEndDate(undefined);
+      setDateSelectionMode('start');
       setClientName("");
       setHotelName("");
       setDescription("");
+      setIsDestinationWedding(false);
       
       // Reload bookings
       loadBookings();
@@ -220,16 +294,19 @@ const AdminDashboard = () => {
                 <CardContent>
                   <Calendar
                     mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
+                    selected={dateSelectionMode === 'start' ? startDate : endDate}
+                    onSelect={handleDateSelect}
                     className="rounded-md border"
                     modifiers={{
                       partiallyBooked: bookedDates.filter(date => 
                         !fullyBookedDates.some(fullDate => 
                           fullDate.toDateString() === date.toDateString()
+                        ) && !destinationWeddingDates.some(destDate =>
+                          destDate.toDateString() === date.toDateString()
                         )
                       ),
                       fullyBooked: fullyBookedDates,
+                      destinationWedding: destinationWeddingDates,
                     }}
                     modifiersStyles={{
                       partiallyBooked: { 
@@ -239,6 +316,10 @@ const AdminDashboard = () => {
                       fullyBooked: { 
                         backgroundColor: "hsl(var(--destructive))",
                         color: "hsl(var(--destructive-foreground))",
+                      },
+                      destinationWedding: {
+                        backgroundColor: "hsl(220 91% 56%)", // Blue color
+                        color: "white",
                       },
                     }}
                   />
@@ -251,6 +332,10 @@ const AdminDashboard = () => {
                       <Badge variant="destructive" className="mr-2">●</Badge>
                       2 bookings (fully booked)
                     </div>
+                    <div>
+                      <Badge className="mr-2 bg-blue-500 text-white">●</Badge>
+                      Destination Wedding
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -259,9 +344,11 @@ const AdminDashboard = () => {
                 <CardHeader>
                   <CardTitle>Booking Details</CardTitle>
                   <CardDescription>
-                    {selectedDate 
-                      ? `Creating booking for ${format(selectedDate, "PPP")}`
-                      : "Select a date to create a booking"
+                    {startDate && endDate
+                      ? `Creating booking from ${format(startDate, "PPP")} to ${format(endDate, "PPP")}`
+                      : startDate 
+                      ? `Start date selected: ${format(startDate, "PPP")}. Select end date.`
+                      : "Select start date first, then end date to create a booking"
                     }
                   </CardDescription>
                 </CardHeader>
@@ -297,10 +384,18 @@ const AdminDashboard = () => {
                         rows={3}
                       />
                     </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="destinationWedding"
+                        checked={isDestinationWedding}
+                        onCheckedChange={(checked) => setIsDestinationWedding(checked === true)}
+                      />
+                      <Label htmlFor="destinationWedding">Destination Wedding</Label>
+                    </div>
                     <Button 
                       type="submit" 
                       className="w-full" 
-                      disabled={!selectedDate || !clientName.trim() || !hotelName.trim() || isLoading}
+                      disabled={!startDate || !endDate || !clientName.trim() || !hotelName.trim() || isLoading}
                     >
                       {isLoading ? "Creating Booking..." : "Create Booking"}
                     </Button>
@@ -334,11 +429,19 @@ const AdminDashboard = () => {
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold">{booking.client_name}</h3>
                             <Badge variant="secondary">
-                              {format(new Date(booking.booking_date), "PPP")}
+                              {booking.end_date && booking.end_date !== booking.booking_date
+                                ? `${format(new Date(booking.booking_date), "MMM d")} - ${format(new Date(booking.end_date), "MMM d, yyyy")}`
+                                : format(new Date(booking.booking_date), "PPP")
+                              }
                             </Badge>
                             <Badge variant="outline">
-                            {booking.hotel_name}
+                              {booking.hotel_name}
                             </Badge>
+                            {booking.destination_wedding && (
+                              <Badge className="bg-blue-500 text-white">
+                                Destination Wedding
+                              </Badge>
+                            )}
                           </div>
                           {booking.description && (
                             <p className="text-sm text-muted-foreground">

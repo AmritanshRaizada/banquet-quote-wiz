@@ -20,6 +20,8 @@ export type Database = {
           client_name: string
           created_at: string
           description: string | null
+          destination_wedding: boolean | null
+          end_date: string | null
           hotel_name: string
           id: string
           profit_percentage: number | null
@@ -30,6 +32,8 @@ export type Database = {
           client_name: string
           created_at?: string
           description?: string | null
+          destination_wedding?: boolean | null
+          end_date?: string | null
           hotel_name?: string
           id?: string
           profit_percentage?: number | null
@@ -40,6 +44,8 @@ export type Database = {
           client_name?: string
           created_at?: string
           description?: string | null
+          destination_wedding?: boolean | null
+          end_date?: string | null
           hotel_name?: string
           id?: string
           profit_percentage?: number | null
