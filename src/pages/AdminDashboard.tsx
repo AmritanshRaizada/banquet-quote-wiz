@@ -39,6 +39,7 @@ const AdminDashboard = () => {
   const [bookedDates, setBookedDates] = useState<Date[]>([]);
   const [fullyBookedDates, setFullyBookedDates] = useState<Date[]>([]);
   const [destinationWeddingDates, setDestinationWeddingDates] = useState<Date[]>([]);
+  const [blockedDates, setBlockedDates] = useState<Date[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -92,15 +93,22 @@ const AdminDashboard = () => {
 
       // Set destination wedding dates (for blue highlighting)
       const destinationDates: Date[] = [];
+      const blockedDates: Date[] = [];
+      
       (data || []).forEach(booking => {
+        const startBookingDate = new Date(booking.booking_date);
+        const endBookingDate = booking.end_date ? new Date(booking.end_date) : startBookingDate;
+        const bookingDates = eachDayOfInterval({ start: startBookingDate, end: endBookingDate });
+        
         if (booking.destination_wedding) {
-          const startBookingDate = new Date(booking.booking_date);
-          const endBookingDate = booking.end_date ? new Date(booking.end_date) : startBookingDate;
-          const bookingDates = eachDayOfInterval({ start: startBookingDate, end: endBookingDate });
           destinationDates.push(...bookingDates);
+          // Destination wedding dates are also blocked for regular bookings
+          blockedDates.push(...bookingDates);
         }
       });
+      
       setDestinationWeddingDates(destinationDates);
+      setBlockedDates(blockedDates);
     } catch (error: any) {
       toast({
         title: "Error loading bookings",
@@ -164,28 +172,75 @@ const AdminDashboard = () => {
       return;
     }
 
-    // Check if any date in the range already has 2 bookings
+    // Check for destination wedding conflicts first
     const selectedDates = eachDayOfInterval({ start: startDate, end: endDate });
-    const conflictingDates: string[] = [];
+    const conflictingDestinationDates: string[] = [];
+    const conflictingRegularDates: string[] = [];
     
     selectedDates.forEach(date => {
       const dateString = format(date, "yyyy-MM-dd");
-      const existingBookingsForDate = bookings.filter(booking => {
+      
+      // Check for destination wedding conflicts
+      const destinationWeddingsForDate = bookings.filter(booking => {
+        if (!booking.destination_wedding) return false;
+        
         const bookingStart = new Date(booking.booking_date);
         const bookingEnd = booking.end_date ? new Date(booking.end_date) : bookingStart;
         const bookingDates = eachDayOfInterval({ start: bookingStart, end: bookingEnd });
         return bookingDates.some(bookingDate => format(bookingDate, "yyyy-MM-dd") === dateString);
       });
       
-      if (existingBookingsForDate.length >= 2) {
-        conflictingDates.push(format(date, "PPP"));
+      // If there's a destination wedding and this is not a destination wedding, block it
+      if (destinationWeddingsForDate.length > 0 && !isDestinationWedding) {
+        conflictingDestinationDates.push(format(date, "PPP"));
+        return;
+      }
+      
+      // If this is a destination wedding and there are any other bookings, block it
+      if (isDestinationWedding) {
+        const anyBookingsForDate = bookings.filter(booking => {
+          const bookingStart = new Date(booking.booking_date);
+          const bookingEnd = booking.end_date ? new Date(booking.end_date) : bookingStart;
+          const bookingDates = eachDayOfInterval({ start: bookingStart, end: bookingEnd });
+          return bookingDates.some(bookingDate => format(bookingDate, "yyyy-MM-dd") === dateString);
+        });
+        
+        if (anyBookingsForDate.length > 0) {
+          conflictingDestinationDates.push(format(date, "PPP"));
+          return;
+        }
+      }
+      
+      // Check regular booking limits (2 per day) for non-destination weddings
+      if (!isDestinationWedding) {
+        const existingBookingsForDate = bookings.filter(booking => {
+          const bookingStart = new Date(booking.booking_date);
+          const bookingEnd = booking.end_date ? new Date(booking.end_date) : bookingStart;
+          const bookingDates = eachDayOfInterval({ start: bookingStart, end: bookingEnd });
+          return bookingDates.some(bookingDate => format(bookingDate, "yyyy-MM-dd") === dateString);
+        });
+        
+        if (existingBookingsForDate.length >= 2) {
+          conflictingRegularDates.push(format(date, "PPP"));
+        }
       }
     });
 
-    if (conflictingDates.length > 0) {
+    if (conflictingDestinationDates.length > 0) {
+      toast({
+        title: "Destination Wedding Conflict",
+        description: isDestinationWedding 
+          ? `Cannot book destination wedding - these dates have existing bookings: ${conflictingDestinationDates.join(", ")}`
+          : `Cannot book during destination wedding dates: ${conflictingDestinationDates.join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (conflictingRegularDates.length > 0) {
       toast({
         title: "Date range conflicts",
-        description: `These dates are fully booked: ${conflictingDates.join(", ")}`,
+        description: `These dates are fully booked: ${conflictingRegularDates.join(", ")}`,
         variant: "destructive",
       });
       return;
@@ -326,10 +381,21 @@ const AdminDashboard = () => {
                           fullDate.toDateString() === date.toDateString()
                         ) && !destinationWeddingDates.some(destDate =>
                           destDate.toDateString() === date.toDateString()
+                        ) && !blockedDates.some(blockedDate =>
+                          blockedDate.toDateString() === date.toDateString()
                         )
                       ),
-                      fullyBooked: fullyBookedDates,
+                      fullyBooked: fullyBookedDates.filter(date =>
+                        !destinationWeddingDates.some(destDate =>
+                          destDate.toDateString() === date.toDateString()
+                        )
+                      ),
                       destinationWedding: destinationWeddingDates,
+                      blocked: blockedDates.filter(date => 
+                        !destinationWeddingDates.some(destDate =>
+                          destDate.toDateString() === date.toDateString()
+                        )
+                      ),
                       startDate: startDate ? [startDate] : [],
                       endDate: endDate ? [endDate] : [],
                       rangeMiddle: startDate && endDate ? 
@@ -349,6 +415,14 @@ const AdminDashboard = () => {
                       destinationWedding: {
                         backgroundColor: "hsl(220 91% 56%)", // Blue color
                         color: "white",
+                        fontWeight: "bold",
+                      },
+                      blocked: {
+                        backgroundColor: "hsl(var(--muted))",
+                        color: "hsl(var(--muted-foreground))",
+                        textDecoration: "line-through",
+                        opacity: "0.5",
+                        cursor: "not-allowed",
                       },
                       startDate: {
                         backgroundColor: "hsl(var(--primary))",
@@ -367,10 +441,23 @@ const AdminDashboard = () => {
                         color: "hsl(var(--foreground))",
                       },
                     }}
+                    disabled={(date) => 
+                      blockedDates.some(blockedDate => 
+                        blockedDate.toDateString() === date.toDateString() && 
+                        !destinationWeddingDates.some(destDate =>
+                          destDate.toDateString() === date.toDateString()
+                        )
+                      ) && !isDestinationWedding
+                    }
                   />
                   <div className="mt-4 text-sm text-muted-foreground space-y-1">
                     <div className="text-sm font-medium text-foreground mb-2">
                       {dateSelectionMode === 'start' ? 'Click to select START date' : 'Click to select END date'}
+                      {!isDestinationWedding && (
+                        <span className="block text-xs text-orange-600 mt-1">
+                          Note: Dates during destination weddings are unavailable for regular bookings
+                        </span>
+                      )}
                     </div>
                     <div>
                       <Badge variant="secondary" className="mr-2 bg-green-500 text-white">●</Badge>
@@ -383,6 +470,10 @@ const AdminDashboard = () => {
                     <div>
                       <Badge className="mr-2 bg-blue-500 text-white">●</Badge>
                       Destination Wedding
+                    </div>
+                    <div>
+                      <Badge variant="outline" className="mr-2 bg-gray-300 text-gray-600">●</Badge>
+                      Blocked (destination wedding period)
                     </div>
                     {startDate && endDate && (
                       <div className="pt-2 border-t">
