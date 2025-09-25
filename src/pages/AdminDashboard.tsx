@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { format, addDays, eachDayOfInterval } from "date-fns";
+import { format, addDays, eachDayOfInterval, isWithinInterval, isSameDay } from "date-fns";
 import { LogOut, Calendar as CalendarIcon, Users } from "lucide-react";
 
 interface Booking {
@@ -286,12 +286,35 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Select Date</CardTitle>
+                  <CardTitle>Select Date Range</CardTitle>
                   <CardDescription>
-                    Choose a date for the marriage booking
+                    Choose start and end dates for the marriage booking
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {(startDate || endDate) && (
+                    <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <div className="text-sm">
+                        {startDate && !endDate && (
+                          <span>Start: <strong>{format(startDate, "PPP")}</strong> - Select end date</span>
+                        )}
+                        {startDate && endDate && (
+                          <span>Range: <strong>{format(startDate, "MMM d")} - {format(endDate, "MMM d, yyyy")}</strong></span>
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setStartDate(undefined);
+                          setEndDate(undefined);
+                          setDateSelectionMode('start');
+                        }}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  )}
                   <Calendar
                     mode="single"
                     selected={dateSelectionMode === 'start' ? startDate : endDate}
@@ -307,6 +330,12 @@ const AdminDashboard = () => {
                       ),
                       fullyBooked: fullyBookedDates,
                       destinationWedding: destinationWeddingDates,
+                      startDate: startDate ? [startDate] : [],
+                      endDate: endDate ? [endDate] : [],
+                      rangeMiddle: startDate && endDate ? 
+                        eachDayOfInterval({ start: startDate, end: endDate })
+                          .filter(date => !isSameDay(date, startDate) && !isSameDay(date, endDate))
+                        : [],
                     }}
                     modifiersStyles={{
                       partiallyBooked: { 
@@ -321,9 +350,28 @@ const AdminDashboard = () => {
                         backgroundColor: "hsl(220 91% 56%)", // Blue color
                         color: "white",
                       },
+                      startDate: {
+                        backgroundColor: "hsl(var(--primary))",
+                        color: "hsl(var(--primary-foreground))",
+                        fontWeight: "bold",
+                        border: "2px solid hsl(var(--primary))",
+                      },
+                      endDate: {
+                        backgroundColor: "hsl(var(--primary))",
+                        color: "hsl(var(--primary-foreground))",
+                        fontWeight: "bold",
+                        border: "2px solid hsl(var(--primary))",
+                      },
+                      rangeMiddle: {
+                        backgroundColor: "hsl(var(--primary) / 0.2)",
+                        color: "hsl(var(--foreground))",
+                      },
                     }}
                   />
                   <div className="mt-4 text-sm text-muted-foreground space-y-1">
+                    <div className="text-sm font-medium text-foreground mb-2">
+                      {dateSelectionMode === 'start' ? 'Click to select START date' : 'Click to select END date'}
+                    </div>
                     <div>
                       <Badge variant="secondary" className="mr-2 bg-green-500 text-white">●</Badge>
                       1 booking (1 slot available)
@@ -336,6 +384,13 @@ const AdminDashboard = () => {
                       <Badge className="mr-2 bg-blue-500 text-white">●</Badge>
                       Destination Wedding
                     </div>
+                    {startDate && endDate && (
+                      <div className="pt-2 border-t">
+                        <div className="text-sm font-medium text-foreground">
+                          Selected Range: {format(startDate, "MMM d")} - {format(endDate, "MMM d, yyyy")}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
