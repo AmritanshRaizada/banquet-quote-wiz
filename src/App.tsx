@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { QuoteForm } from "./components/ui/QuoteForm";
 import { ImageSelector } from "./components/ui/ImageSelector";
 import { generateQuotationPDF, QuoteData, Banquet } from "./utils/pdfGenerator";
@@ -73,6 +74,18 @@ const QuoteFlow = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle p-4">
+      {/* Admin Access Button */}
+      <div className="fixed top-4 right-4 z-50">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.location.href = '/admin/login'}
+          className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+        >
+          Admin
+        </Button>
+      </div>
+      
       {currentStep === 'form' ? (
         <QuoteForm 
           banquet={defaultBanquet}
