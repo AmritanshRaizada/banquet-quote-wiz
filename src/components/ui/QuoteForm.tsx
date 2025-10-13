@@ -25,7 +25,8 @@ interface QuoteData {
   clientName: string;
   venueName: string;
   location: string;
-  eventDate: string;
+  startDate: string;
+  endDate: string;
   services: Service[];
   notes: string;
   gstIncluded: boolean;
@@ -42,7 +43,8 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
     clientName: "",
     venueName: "",
     location: "",
-    eventDate: "",
+    startDate: "",
+    endDate: "",
     services: [
       {
         description: "Banquet per plate",
@@ -57,7 +59,7 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.clientName && formData.venueName && formData.location && formData.eventDate && formData.services.length > 0) {
+    if (formData.clientName && formData.venueName && formData.location && formData.startDate && formData.endDate && formData.services.length > 0) {
       const hasValidServices = formData.services.every(service => 
         service.description.trim() && service.pax > 0 && service.price > 0
       );
@@ -154,16 +156,34 @@ export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="eventDate" className="flex items-center text-foreground">
+            <Label htmlFor="startDate" className="flex items-center text-foreground">
               <Calendar className="h-4 w-4 mr-2" />
-              Event Date *
+              Start Date *
             </Label>
             <Input
-              id="eventDate"
+              id="startDate"
               type="date"
-              value={formData.eventDate}
-              onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+              value={formData.startDate}
+              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
               required
+              className="h-12 text-lg border-border focus:ring-primary"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="endDate" className="flex items-center text-foreground">
+              <Calendar className="h-4 w-4 mr-2" />
+              End Date *
+            </Label>
+            <Input
+              id="endDate"
+              type="date"
+              value={formData.endDate}
+              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+              required
+              min={formData.startDate}
               className="h-12 text-lg border-border focus:ring-primary"
             />
           </div>

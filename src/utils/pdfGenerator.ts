@@ -18,7 +18,8 @@ export interface QuoteData {
   clientName: string;
   venueName: string;
   location: string;
-  eventDate: string;
+  startDate: string;
+  endDate: string;
   services: Service[];
   notes: string;
   gstIncluded: boolean;
@@ -220,7 +221,9 @@ export const generateQuotationPDF = async (
     
     pdf.setFont('helvetica', 'normal');
     pdf.text(`Client Name: ${quoteData.clientName}`, col2, yPosition + 7);
-    pdf.text(`Event Date: ${new Date(quoteData.eventDate).toLocaleDateString('en-IN')}`, col2, yPosition + 14);
+    const startDateFormatted = new Date(quoteData.startDate).toLocaleDateString('en-IN');
+    const endDateFormatted = new Date(quoteData.endDate).toLocaleDateString('en-IN');
+    pdf.text(`Event Date: ${startDateFormatted} - ${endDateFormatted}`, col2, yPosition + 14);
     
     yPosition += 40;
 

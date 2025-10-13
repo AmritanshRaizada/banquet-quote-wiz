@@ -27,7 +27,8 @@ interface QuoteData {
   clientName: string;
   venueName: string;
   location: string;
-  eventDate: string;
+  startDate: string;
+  endDate: string;
   services: Service[];
   notes: string;
   gstIncluded: boolean;
