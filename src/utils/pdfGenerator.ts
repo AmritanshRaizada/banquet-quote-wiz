@@ -158,24 +158,24 @@ export const generateQuotationPDF = async (
     const lightGray = '#F5F5F5';
     const borderColor = '#DDDDDD';
 
-    let yPosition = 40;
+    let yPosition = 30;
 
     // Try to load and add logo
     try {
       const logoDataUrl = await loadImage('/public/B W Logo.png');
-      pdf.addImage(logoDataUrl, 'PNG', 15, 10, 30, 30);
+      pdf.addImage(logoDataUrl, 'PNG', 15, 5, 15, 15);
     } catch (error) {
       console.warn('Logo not found, proceeding without it');
     }
 
     // Header
     pdf.setFillColor(primaryColor);
-    pdf.rect(0, 0, pageWidth, 50, 'F');
+    pdf.rect(0, 0, pageWidth, 25, 'F');
     
     pdf.setTextColor('#FFFFFF');
     pdf.setFontSize(24);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('PROFORMA INVOICE', pageWidth / 2, 30, { align: 'center' });
+    pdf.text('PROFORMA INVOICE', pageWidth / 2, 17, { align: 'center' });
 
     // Company info
     pdf.setFontSize(10);
