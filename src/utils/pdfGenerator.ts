@@ -189,7 +189,7 @@ export const generateQuotationPDF = async (
     pdf.setTextColor('#FFFFFF');
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('QUOTATION DETAILS', pageWidth / 2, yPosition + 10, { align: 'center' });
+    pdf.text('DETAILS', pageWidth / 2, yPosition + 10, { align: 'center' });
     
     yPosition += 25;
 
@@ -314,7 +314,7 @@ export const generateQuotationPDF = async (
     pdf.setTextColor('#666666');
     pdf.setFontSize(9);
     pdf.text('Thank you for your business!', pageWidth / 2, pageHeight - 20, { align: 'center' });
-    pdf.text(`Copyright © ${new Date().getFullYear()} Shaadiplatform Pvt Ltd. • Generated on: ${new Date().toLocaleDateString('en-IN')}`, 
+    pdf.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 
              pageWidth / 2, pageHeight - 15, { align: 'center' });
 
     // Save the PDF
