@@ -90,6 +90,7 @@ const QuoteFlow = () => {
         <QuoteForm 
           banquet={defaultBanquet}
           onNext={handleQuoteNext}
+          initialData={quoteData || undefined}
         />
       ) : (
         <ImageSelector 

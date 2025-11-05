@@ -36,10 +36,11 @@ interface QuoteData {
 interface QuoteFormProps {
   banquet: Banquet;
   onNext: (data: QuoteData) => void;
+  initialData?: QuoteData;
 }
 
-export const QuoteForm = ({ banquet, onNext }: QuoteFormProps) => {
-  const [formData, setFormData] = useState<QuoteData>({
+export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
+  const [formData, setFormData] = useState<QuoteData>(initialData || {
     clientName: "",
     venueName: "",
     location: "",
