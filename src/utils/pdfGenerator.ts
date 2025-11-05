@@ -236,7 +236,7 @@ export const generateQuotationPDF = async (
     (pdf as any).setGState(new (pdf as any).GState({ opacity: 1 }));
     pdf.setTextColor('#FFFFFF');
     pdf.setFont('helvetica', 'bold');
-    pdf.text('PRICING BREAKDOWN', pageWidth / 2, yPosition + 10, { align: 'center' });
+    pdf.text('BIFURCATION', pageWidth / 2, yPosition + 10, { align: 'center' });
     
     yPosition += 20;
     
