@@ -24,7 +24,20 @@ export interface QuoteData {
   notes: string;
   gstIncluded: boolean;
   gstPercentage: number;
+  // new optional fields
+  invoiceNumber?: string;
+  issueDate?: string;
+  discountAmount?: number;
 }
+
+// Brand constants
+const COMPANY_NAME = 'Shaadi Platform';
+const COMPANY_TAGLINE = 'By Nosh n Shots';
+const COMPANY_EMAIL = 'info@shaadiplatform.com';
+const COMPANY_PHONE = '+91-9990837771';
+
+// Template URL for quotation background
+const QUOTATION_TEMPLATE_URL = '/templates/shaadi_quotation_a4.png';
 
 // Utility function to format currency
 const formatCurrency = (amount: number): string => {
@@ -148,176 +161,180 @@ export const generateQuotationPDF = async (
 ): Promise<void> => {
   try {
     const pdf = new jsPDF('p', 'mm', 'a4');
-    
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    // Colors matching our theme
-    const primaryColor = '#601220';
-    const secondaryColor = '#8D2B3E';
-    const textColor = '#2D2D2D';
-    const lightGray = '#F5F5F5';
-    const borderColor = '#DDDDDD';
 
-    let yPosition = 30;
+    // 1) Background template (floral layout with T&C)
+    const templateDataUrl = await loadImageWithFallback(QUOTATION_TEMPLATE_URL);
+    pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
 
-    // Try to load and add logo
-    try {
-      const logoDataUrl = await loadImage('/public/B W Logo.png');
-      pdf.addImage(logoDataUrl, 'PNG', 15, 5, 15, 15);
-    } catch (error) {
-      console.warn('Logo not found, proceeding without it');
-    }
+    pdf.setTextColor('#000000');
+    pdf.setFont('helvetica', 'normal');
 
-    // Header
-    pdf.setFillColor(primaryColor);
-    pdf.rect(0, 0, pageWidth, 25, 'F');
-    
-    pdf.setTextColor('#FFFFFF');
-    pdf.setFontSize(24);
+    // ---------- HEADER: LEFT SIDE ----------
+    let y = 30;
+
     pdf.setFont('helvetica', 'bold');
-    pdf.text('PROFORMA INVOICE', pageWidth / 2, 17, { align: 'center' });
+    pdf.setFontSize(20);
+    pdf.text(COMPANY_NAME, 20, y);
 
-    // Company info
+    pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
+    y += 7;
+    pdf.text(COMPANY_TAGLINE, 20, y);
+    y += 5;
+    pdf.text(COMPANY_EMAIL, 20, y);
+    y += 5;
+    pdf.text(COMPANY_PHONE, 20, y);
 
-    pdf.text('contact@banquetquotationmaker.com • +91 1234567890', pageWidth / 2, 45, { align: 'center' });
+    // ---------- HEADER: RIGHT SIDE ----------
+    const headerRightX = pageWidth - 20;
 
-    // Quotation details header
-    pdf.setFillColor(secondaryColor);
-    pdf.rect(20, yPosition, pageWidth - 40, 15, 'F');
-    pdf.setTextColor('#FFFFFF');
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
+    pdf.text('PROFORMA INVOICE', headerRightX, 30, { align: 'right' });
+
+    const invoiceNumber = quoteData.invoiceNumber ?? `#${Date.now()}`;
+    const issueDate = quoteData.issueDate
+      ? new Date(quoteData.issueDate).toLocaleDateString('en-IN')
+      : new Date().toLocaleDateString('en-IN');
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text(`Invoice Number: ${invoiceNumber}`, headerRightX, 38, { align: 'right' });
+    pdf.text(`Date: ${issueDate}`, headerRightX, 44, { align: 'right' });
+
+    // ---------- CLIENT INFORMATION ----------
+    y = 70;
+
     pdf.setFont('helvetica', 'bold');
-    pdf.text('DETAILS', pageWidth / 2, yPosition + 10, { align: 'center' });
-    
-    yPosition += 25;
-
-    // Two column layout
-    const col1 = 20;
-    const col2 = pageWidth / 2 + 10;
-
-    // Venue Information
-    pdf.setTextColor(textColor);
     pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Venue Details', col1, yPosition);
-    
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Venue: ${quoteData.venueName}`, col1, yPosition + 7);
-    const locationText = `Location: ${quoteData.location}`;
-    const locationLines = pdf.splitTextToSize(locationText, 60); // Approx 25 chars width at font size 12
-    let currentLocationY = yPosition + 14;
-    locationLines.forEach((line: string) => {
-      pdf.text(line, col1, currentLocationY);
-      currentLocationY += 7; // Line height
-    });
-    // Adjust yPosition for the next element based on the number of lines
-    yPosition += (locationLines.length - 1) * 7;
+    pdf.text('Client Information', 20, y);
 
-    // Client Information
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Client Information', col2, yPosition);
-    
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Client Name: ${quoteData.clientName}`, col2, yPosition + 7);
+    pdf.setFontSize(10);
+    y += 7;
+    pdf.text(`Client Name: ${quoteData.clientName}`, 20, y);
+
     const startDateFormatted = new Date(quoteData.startDate).toLocaleDateString('en-IN');
     const endDateFormatted = new Date(quoteData.endDate).toLocaleDateString('en-IN');
-    pdf.text(`Event Date: ${startDateFormatted} - ${endDateFormatted}`, col2, yPosition + 14);
-    
-    yPosition += 40;
 
-    // Pricing Details
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (pdf as any).setGState(new (pdf as any).GState({ opacity: 0.89 }));
-    pdf.setFillColor(secondaryColor);
-    pdf.rect(20, yPosition, pageWidth - 40, 15, 'F');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (pdf as any).setGState(new (pdf as any).GState({ opacity: 1 }));
-    pdf.setTextColor('#FFFFFF');
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('BIFURCATION', pageWidth / 2, yPosition + 10, { align: 'center' });
-    
-    yPosition += 20;
-    
-    // Table header
-    pdf.setFillColor(lightGray);
-    pdf.rect(20, yPosition, pageWidth - 40, 10, 'F');
-    pdf.setTextColor(textColor);
-    
-    pdf.text('SERVICES', 25, yPosition + 7);
-    pdf.text('No. of PAX', 100, yPosition + 7);
-    pdf.text('PRICE', 130, yPosition + 7);
-    pdf.text('AMOUNT', 160, yPosition + 7);
-    
-    yPosition += 15;
-    
-    // Table content
-    pdf.setFont('helvetica', 'normal');
-    let subtotal = 0;
-    
-    quoteData.services.forEach((service, index) => {
-      const serviceTotal = service.pax * service.price;
-      subtotal += serviceTotal;
-      
-      pdf.text(service.description, 25, yPosition, { maxWidth: 70 });
-      pdf.text(service.pax.toLocaleString('en-IN'), 100, yPosition);
-      pdf.text(formatCurrency(service.price), 130, yPosition);
-      pdf.text(formatCurrency(serviceTotal), 160, yPosition);
-      
-      yPosition += 10;
-    });
-    
-    yPosition += 10;
-    
-    // Subtotal
-    pdf.setDrawColor(borderColor);
-    pdf.line(20, yPosition, pageWidth - 20, yPosition);
-    
-    yPosition += 10;
+    y += 6;
+    pdf.text(`Event Date: ${startDateFormatted} - ${endDateFormatted}`, 20, y);
+
+    y += 6;
+    pdf.text(`Venue: ${quoteData.venueName}`, 20, y);
+
+    // ---------- BIFURCATION HEADING ----------
+    y += 15;
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(12);
-    pdf.text('Subtotal:', 120, yPosition);
-    pdf.text(formatCurrency(subtotal), 160, yPosition);
+    pdf.text('BIFURCATION', 20, y);
+
+    // ---------- TABLE HEADER ----------
+    y += 10;
+    pdf.setFontSize(10);
+
+    const colNoX = 20;
+    const colServiceX = 35;
+    const colPaxX = 110;
+    const colPriceX = 145;
+    const colAmountX = 185;
+
+    pdf.text('NO', colNoX, y);
+    pdf.text('SERVICES', colServiceX, y);
+    pdf.text('NO. OF PAX', colPaxX, y, { align: 'right' });
+    pdf.text('PRICE', colPriceX, y, { align: 'right' });
+    pdf.text('AMOUNT', colAmountX, y, { align: 'right' });
+
+    // ---------- TABLE ROWS ----------
+    y += 8;
+    pdf.setFont('helvetica', 'normal');
+
+    let subtotal = 0;
+    const rowHeight = 7;
+    const bottomMargin = 90;
+
+    quoteData.services.forEach((service, index) => {
+      // simple page break handling
+      if (y > pageHeight - bottomMargin) {
+        pdf.addPage();
+        pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+        y = 40;
+      }
+
+      const serviceTotal = service.pax * service.price;
+      subtotal += serviceTotal;
+
+      pdf.text(String(index + 1), colNoX, y);
+      pdf.text(service.description, colServiceX, y, { maxWidth: colPaxX - colServiceX - 5 });
+      pdf.text(service.pax.toLocaleString('en-IN'), colPaxX, y, { align: 'right' });
+      pdf.text(formatCurrency(service.price), colPriceX, y, { align: 'right' });
+      pdf.text(formatCurrency(serviceTotal), colAmountX, y, { align: 'right' });
+
+      y += rowHeight;
+    });
+
+    // ---------- TOTALS BLOCK ----------
+    const minTotalsY = 190;
+    y = Math.max(y + 15, minTotalsY);
+
+    const totalsLabelX = 120;
+    const totalsValueX = colAmountX;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+
+    pdf.setLineWidth(0.4);
+    pdf.line(totalsLabelX, y - 6, totalsValueX, y - 6);
+
+    // Subtotal
+    pdf.text('Subtotal:', totalsLabelX, y);
+    pdf.text(formatCurrency(subtotal), totalsValueX, y, { align: 'right' });
 
     // GST
     let gstAmount = 0;
     if (quoteData.gstIncluded && quoteData.gstPercentage > 0) {
       gstAmount = (subtotal * quoteData.gstPercentage) / 100;
-      yPosition += 7;
-      pdf.text(`GST (${quoteData.gstPercentage}%):`, 120, yPosition);
-      pdf.text(formatCurrency(gstAmount), 160, yPosition);
+      y += 7;
+      pdf.text(`GST (${quoteData.gstPercentage}%):`, totalsLabelX, y);
+      pdf.text(formatCurrency(gstAmount), totalsValueX, y, { align: 'right' });
     }
 
-    const total = subtotal + gstAmount;
-    
-    yPosition += 10;
-    pdf.setFontSize(14);
-    pdf.text('Total Amount:', 120, yPosition);
-    pdf.text(formatCurrency(total), 160, yPosition);
-    
-    yPosition += 15;
-    
-    // Notes if available
+    // Discount
+    const discountAmount = quoteData.discountAmount ?? 0;
+    y += 7;
+    pdf.text('Discount:', totalsLabelX, y);
+    pdf.text(
+      discountAmount > 0 ? formatCurrency(discountAmount) : '-',
+      totalsValueX,
+      y,
+      { align: 'right' }
+    );
+
+    // line before final total
+    y += 5;
+    pdf.line(totalsLabelX, y, totalsValueX, y);
+    y += 8;
+
+    // Total
+    const total = subtotal + gstAmount - discountAmount;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('Total Amount:', totalsLabelX, y);
+    pdf.text(formatCurrency(total), totalsValueX, y, { align: 'right' });
+
+    // ---------- NOTES ----------
     if (quoteData.notes) {
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'italic');
-      pdf.text(`Notes: ${quoteData.notes}`, 20, yPosition, { maxWidth: pageWidth - 40 });
-      yPosition += 10;
+      const notesY = y + 15;
+      if (notesY < pageHeight - 40) {
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(9);
+        const notesLines = pdf.splitTextToSize(quoteData.notes, pageWidth - 40);
+        pdf.text(notesLines, 20, notesY);
+      }
     }
 
-
-    // Footer
-    pdf.setDrawColor(borderColor);
-    pdf.line(20, pageHeight - 30, pageWidth - 20, pageHeight - 30);
-    
-    pdf.setTextColor('#666666');
-    pdf.setFontSize(9);
-    pdf.text('Thank you for your business!', pageWidth / 2, pageHeight - 20, { align: 'center' });
-    pdf.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 
-             pageWidth / 2, pageHeight - 15, { align: 'center' });
-
-    // Save the PDF
     const fileName = `${sanitizeFileName(quoteData.venueName)}_quotation_${Date.now()}.pdf`;
     pdf.save(fileName);
   } catch (error) {
