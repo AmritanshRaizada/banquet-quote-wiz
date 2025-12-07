@@ -31,6 +31,7 @@ interface QuoteData {
   notes: string;
   gstIncluded: boolean;
   gstPercentage: number;
+  discountAmount?: number;
 }
 
 interface QuoteFormProps {
@@ -55,7 +56,8 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
     ],
     notes: "",
     gstIncluded: false,
-    gstPercentage: 0
+    gstPercentage: 0,
+    discountAmount: 0
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -98,7 +100,8 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
 
   const subtotal = formData.services.reduce((sum, service) => sum + (service.pax * service.price), 0);
   const gstAmount = formData.gstIncluded ? (subtotal * formData.gstPercentage) / 100 : 0;
-  const total = subtotal + gstAmount;
+  const discountAmount = formData.discountAmount || 0;
+  const total = subtotal + gstAmount - discountAmount;
 
   return (
     <Card className="p-8 bg-card border border-border shadow-elegant animate-slide-up">
@@ -291,6 +294,22 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
           </div>
         )}
 
+        <div className="space-y-2 mb-4">
+          <Label htmlFor="discountAmount" className="flex items-center text-foreground">
+            <IndianRupee className="h-4 w-4 mr-2" />
+            Discount Amount
+          </Label>
+          <Input
+            id="discountAmount"
+            type="number"
+            value={formData.discountAmount}
+            onChange={(e) => setFormData({ ...formData, discountAmount: parseFloat(e.target.value) || 0 })}
+            min="0"
+            placeholder="Enter discount amount"
+            className="h-12 text-lg border-border focus:ring-primary"
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="notes" className="text-foreground">Additional Notes</Label>
           <Textarea
@@ -318,6 +337,12 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
               <div className="flex justify-between font-medium text-foreground">
                 <span>GST ({formData.gstPercentage}%):</span>
                 <span>₹{gstAmount.toLocaleString()}</span>
+              </div>
+            )}
+            {discountAmount > 0 && (
+              <div className="flex justify-between font-medium text-foreground">
+                <span>Discount:</span>
+                <span>-₹{discountAmount.toLocaleString()}</span>
               </div>
             )}
           </div>
