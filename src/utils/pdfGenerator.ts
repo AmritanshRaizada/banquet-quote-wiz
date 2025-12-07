@@ -174,9 +174,13 @@ export const generateQuotationPDF = async (
     // ---------- HEADER: LEFT SIDE ----------
     let y = 30;
 
+    pdf.setTextColor('#611221');
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(20);
+    pdf.setFontSize(24);
+    pdf.setCharSpace(0.5);
     pdf.text(COMPANY_NAME, 20, y);
+    pdf.setCharSpace(0);
+    pdf.setTextColor('#000000');
 
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
