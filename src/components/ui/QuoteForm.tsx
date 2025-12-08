@@ -19,6 +19,7 @@ interface Service {
   description: string;
   pax: number;
   price: number;
+  excludeGst: boolean;
 }
 
 interface QuoteData {
@@ -51,7 +52,8 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
       {
         description: "Banquet per plate",
         pax: 100,
-        price: banquet.basePrice
+        price: banquet.basePrice,
+        excludeGst: false
       }
     ],
     notes: "",
@@ -77,7 +79,7 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
       ...formData,
       services: [
         ...formData.services,
-        { description: "", pax: 1, price: 0 }
+        { description: "", pax: 1, price: 0, excludeGst: false }
       ]
     });
   };
@@ -91,7 +93,7 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
     }
   };
 
-  const updateService = (index: number, field: keyof Service, value: string | number) => {
+  const updateService = (index: number, field: keyof Service, value: string | number | boolean) => {
     const updatedServices = formData.services.map((service, i) => 
       i === index ? { ...service, [field]: value } : service
     );
@@ -99,7 +101,10 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
   };
 
   const subtotal = formData.services.reduce((sum, service) => sum + (service.pax * service.price), 0);
-  const gstAmount = formData.gstIncluded ? (subtotal * formData.gstPercentage) / 100 : 0;
+  const gstEligibleSubtotal = formData.services
+    .filter(service => !service.excludeGst)
+    .reduce((sum, service) => sum + (service.pax * service.price), 0);
+  const gstAmount = formData.gstIncluded ? (gstEligibleSubtotal * formData.gstPercentage) / 100 : 0;
   const discountAmount = formData.discountAmount || 0;
   const total = subtotal + gstAmount - discountAmount;
 
@@ -260,7 +265,17 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
                 </div>
               </div>
               
-              <div className="mt-3 text-right">
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`excludeGst-${index}`}
+                    checked={service.excludeGst}
+                    onCheckedChange={(checked) => updateService(index, 'excludeGst', !!checked)}
+                  />
+                  <Label htmlFor={`excludeGst-${index}`} className="text-sm text-muted-foreground">
+                    Exclude GST
+                  </Label>
+                </div>
                 <span className="text-sm text-muted-foreground">
                   Subtotal: ₹{(service.pax * service.price).toLocaleString()}
                 </span>
