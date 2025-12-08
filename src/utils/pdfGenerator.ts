@@ -38,12 +38,12 @@ export interface QuoteData {
 const BRANDS = {
   shaadi: {
     name: 'Shaadi Platform',
-    tagline: 'By Nosh n Shots',
+    tagline: 'By Nosh N Shots',
     email: 'info@shaadiplatform.com',
     phone: '+91-9990837771',
   },
   nosh: {
-    name: 'Nosh n Shots',
+    name: 'Nosh N Shots',
     tagline: '',
     email: 'info@shaadiplatform.com',
     phone: '+91-9990837771',
@@ -246,11 +246,11 @@ export const generateQuotationPDF = async (
     y += 6;
     pdf.text(`Venue: ${quoteData.venueName}`, 20, y);
 
-    // ---------- BIFURCATION HEADING ----------
+    // ---------- Event Details HEADING ----------
     y += 15;
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(12);
-    pdf.text('BIFURCATION', 20, y);
+    pdf.text('Event Details', 20, y);
 
     // ---------- TABLE HEADER ----------
     y += 10;

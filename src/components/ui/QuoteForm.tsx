@@ -131,13 +131,13 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="shaadi" id="brand-shaadi" />
               <Label htmlFor="brand-shaadi" className="cursor-pointer">
-                Shaadi Platform <span className="text-muted-foreground text-sm">(By Nosh n Shots)</span>
+                Shaadi Platform <span className="text-muted-foreground text-sm">(By Nosh N Shots)</span>
               </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="nosh" id="brand-nosh" />
               <Label htmlFor="brand-nosh" className="cursor-pointer">
-                Nosh n Shots
+                Nosh N Shots
               </Label>
             </div>
           </RadioGroup>
