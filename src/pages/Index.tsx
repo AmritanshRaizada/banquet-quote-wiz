@@ -24,6 +24,8 @@ interface Service {
   excludeGst: boolean;
 }
 
+type BrandType = 'shaadi' | 'nosh';
+
 interface QuoteData {
   clientName: string;
   venueName: string;
@@ -35,6 +37,7 @@ interface QuoteData {
   gstIncluded: boolean;
   gstPercentage: number;
   discountAmount?: number;
+  brandType: BrandType;
 }
 
 const BANQUETS: Banquet[] = [
