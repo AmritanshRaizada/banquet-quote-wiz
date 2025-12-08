@@ -5,7 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar, User, Plus, Trash2, IndianRupee } from "lucide-react";
+
+export type BrandType = 'shaadi' | 'nosh';
 
 interface Banquet {
   id: string;
@@ -33,6 +36,7 @@ interface QuoteData {
   gstIncluded: boolean;
   gstPercentage: number;
   discountAmount?: number;
+  brandType: BrandType;
 }
 
 interface QuoteFormProps {
@@ -59,7 +63,8 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
     notes: "",
     gstIncluded: false,
     gstPercentage: 0,
-    discountAmount: 0
+    discountAmount: 0,
+    brandType: 'shaadi'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -116,6 +121,27 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-3">
+          <Label className="text-foreground font-semibold">Brand for PDF</Label>
+          <RadioGroup
+            value={formData.brandType}
+            onValueChange={(value: BrandType) => setFormData({ ...formData, brandType: value })}
+            className="flex flex-col sm:flex-row gap-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="shaadi" id="brand-shaadi" />
+              <Label htmlFor="brand-shaadi" className="cursor-pointer">
+                Shaadi Platform <span className="text-muted-foreground text-sm">(By Nosh n Shots)</span>
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="nosh" id="brand-nosh" />
+              <Label htmlFor="brand-nosh" className="cursor-pointer">
+                Nosh n Shots
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="clientName" className="flex items-center text-foreground">

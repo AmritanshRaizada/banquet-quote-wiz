@@ -15,6 +15,8 @@ interface Service {
   excludeGst: boolean;
 }
 
+export type BrandType = 'shaadi' | 'nosh';
+
 export interface QuoteData {
   clientName: string;
   venueName: string;
@@ -29,13 +31,24 @@ export interface QuoteData {
   invoiceNumber?: string;
   issueDate?: string;
   discountAmount?: number;
+  brandType: BrandType;
 }
 
 // Brand constants
-const COMPANY_NAME = 'Shaadi Platform';
-const COMPANY_TAGLINE = 'By Nosh n Shots';
-const COMPANY_EMAIL = 'info@shaadiplatform.com';
-const COMPANY_PHONE = '+91-9990837771';
+const BRANDS = {
+  shaadi: {
+    name: 'Shaadi Platform',
+    tagline: 'By Nosh n Shots',
+    email: 'info@shaadiplatform.com',
+    phone: '+91-9990837771',
+  },
+  nosh: {
+    name: 'Nosh n Shots',
+    tagline: '',
+    email: 'info@shaadiplatform.com',
+    phone: '+91-9990837771',
+  }
+};
 
 // Template URL for quotation background
 const QUOTATION_TEMPLATE_URL = '/templates/shaadi_quotation_a4.png';
@@ -172,6 +185,9 @@ export const generateQuotationPDF = async (
     pdf.setTextColor('#000000');
     pdf.setFont('helvetica', 'normal');
 
+    // Get brand info based on selection
+    const brand = BRANDS[quoteData.brandType || 'shaadi'];
+
     // ---------- HEADER: LEFT SIDE ----------
     let y = 30;
 
@@ -179,18 +195,20 @@ export const generateQuotationPDF = async (
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(24);
     pdf.setCharSpace(0.5);
-    pdf.text(COMPANY_NAME, 20, y);
+    pdf.text(brand.name, 20, y);
     pdf.setCharSpace(0);
     pdf.setTextColor('#000000');
 
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
     y += 7;
-    pdf.text(COMPANY_TAGLINE, 20, y);
+    if (brand.tagline) {
+      pdf.text(brand.tagline, 20, y);
+      y += 5;
+    }
+    pdf.text(brand.email, 20, y);
     y += 5;
-    pdf.text(COMPANY_EMAIL, 20, y);
-    y += 5;
-    pdf.text(COMPANY_PHONE, 20, y);
+    pdf.text(brand.phone, 20, y);
 
     // ---------- HEADER: RIGHT SIDE ----------
     const headerRightX = pageWidth - 20;
