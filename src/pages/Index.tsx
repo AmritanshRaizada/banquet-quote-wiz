@@ -21,6 +21,7 @@ interface Service {
   description: string;
   pax: number;
   price: number;
+  excludeGst: boolean;
 }
 
 interface QuoteData {
@@ -33,6 +34,7 @@ interface QuoteData {
   notes: string;
   gstIncluded: boolean;
   gstPercentage: number;
+  discountAmount?: number;
 }
 
 const BANQUETS: Banquet[] = [

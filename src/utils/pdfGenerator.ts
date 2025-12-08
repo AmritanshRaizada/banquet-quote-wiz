@@ -12,6 +12,7 @@ interface Service {
   description: string;
   pax: number;
   price: number;
+  excludeGst: boolean;
 }
 
 export interface QuoteData {
@@ -198,15 +199,13 @@ export const generateQuotationPDF = async (
     pdf.setFontSize(14);
     pdf.text('PROFORMA INVOICE', headerRightX, 30, { align: 'right' });
 
-    const invoiceNumber = quoteData.invoiceNumber ?? `#${Date.now()}`;
     const issueDate = quoteData.issueDate
       ? new Date(quoteData.issueDate).toLocaleDateString('en-IN')
       : new Date().toLocaleDateString('en-IN');
 
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
-    pdf.text(`Invoice Number: ${invoiceNumber}`, headerRightX, 38, { align: 'right' });
-    pdf.text(`Date: ${issueDate}`, headerRightX, 44, { align: 'right' });
+    pdf.text(`Date: ${issueDate}`, headerRightX, 38, { align: 'right' });
 
     // ---------- CLIENT INFORMATION ----------
     y = 70;
@@ -296,10 +295,13 @@ export const generateQuotationPDF = async (
     pdf.text('Subtotal:', totalsLabelX, y);
     pdf.text(formatCurrency(subtotal), totalsValueX, y, { align: 'right' });
 
-    // GST
+    // GST - only on services that don't exclude GST
     let gstAmount = 0;
     if (quoteData.gstIncluded && quoteData.gstPercentage > 0) {
-      gstAmount = (subtotal * quoteData.gstPercentage) / 100;
+      const gstEligibleSubtotal = quoteData.services
+        .filter(service => !service.excludeGst)
+        .reduce((sum, service) => sum + (service.pax * service.price), 0);
+      gstAmount = (gstEligibleSubtotal * quoteData.gstPercentage) / 100;
       y += 7;
       pdf.text(`GST (${quoteData.gstPercentage}%):`, totalsLabelX, y);
       pdf.text(formatCurrency(gstAmount), totalsValueX, y, { align: 'right' });
