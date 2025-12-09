@@ -217,7 +217,7 @@ export const generateQuotationPDF = async (
 
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
-    pdf.text('PROFORMA INVOICE', headerRightX, 30, { align: 'right' });
+    pdf.text('Estimated Quotation', headerRightX, 30, { align: 'right' });
 
     const issueDate = quoteData.issueDate
       ? new Date(quoteData.issueDate).toLocaleDateString('en-IN')
