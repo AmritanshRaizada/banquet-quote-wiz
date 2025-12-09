@@ -257,16 +257,18 @@ export const generateQuotationPDF = async (
     pdf.setFontSize(10);
 
     const colNoX = 20;
-    const colServiceX = 35;
-    const colPaxX = 110;
-    const colPriceX = 145;
-    const colAmountX = 185;
+    const colServiceX = 32;
+    const colPaxX = 85;
+    const colPriceX = 115;
+    const colAmountX = 150;
+    const colGstX = 188;
 
     pdf.text('NO', colNoX, y);
     pdf.text('DESCRIPTION', colServiceX, y);
-    pdf.text('NO. OF PAX', colPaxX, y, { align: 'right' });
+    pdf.text('PAX', colPaxX, y, { align: 'right' });
     pdf.text('PRICE', colPriceX, y, { align: 'right' });
     pdf.text('AMOUNT', colAmountX, y, { align: 'right' });
+    pdf.text('GST', colGstX, y, { align: 'right' });
 
     // ---------- TABLE ROWS ----------
     y += 8;
@@ -287,11 +289,17 @@ export const generateQuotationPDF = async (
       const serviceTotal = service.pax * service.price;
       subtotal += serviceTotal;
 
+      // Calculate GST for this service
+      const serviceGst = (!service.excludeGst && quoteData.gstIncluded && quoteData.gstPercentage > 0)
+        ? (serviceTotal * quoteData.gstPercentage) / 100
+        : 0;
+
       pdf.text(String(index + 1), colNoX, y);
       pdf.text(service.description, colServiceX, y, { maxWidth: colPaxX - colServiceX - 5 });
       pdf.text(service.pax.toLocaleString('en-IN'), colPaxX, y, { align: 'right' });
       pdf.text(formatCurrency(service.price), colPriceX, y, { align: 'right' });
       pdf.text(formatCurrency(serviceTotal), colAmountX, y, { align: 'right' });
+      pdf.text(formatCurrency(serviceGst), colGstX, y, { align: 'right' });
 
       y += rowHeight;
     });
