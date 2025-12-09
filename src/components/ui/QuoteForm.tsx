@@ -20,6 +20,7 @@ interface Banquet {
 
 interface Service {
   description: string;
+  remarks: string;
   pax: number;
   price: number;
   excludeGst: boolean;
@@ -55,6 +56,7 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
     services: [
       {
         description: "Banquet per plate",
+        remarks: "",
         pax: 100,
         price: banquet.basePrice,
         excludeGst: false
@@ -84,7 +86,7 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
       ...formData,
       services: [
         ...formData.services,
-        { description: "", pax: 1, price: 0, excludeGst: false }
+        { description: "", remarks: "", pax: 1, price: 0, excludeGst: false }
       ]
     });
   };
@@ -242,7 +244,7 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
           {formData.services.map((service, index) => (
             <Card key={index} className="p-4 bg-accent/30">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div className="md:col-span-2 space-y-2">
+              <div className="md:col-span-2 space-y-2">
                   <Label>Description of Service *</Label>
                   <Input
                     value={service.description}
@@ -250,6 +252,12 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
                     placeholder="e.g., Banquet per plate, Photography, Decoration"
                     required
                     className="border-border focus:ring-primary"
+                  />
+                  <Input
+                    value={service.remarks}
+                    onChange={(e) => updateService(index, 'remarks', e.target.value)}
+                    placeholder="Remarks (optional)"
+                    className="border-border focus:ring-primary mt-2"
                   />
                 </div>
                 
