@@ -280,8 +280,19 @@ export const generateQuotationPDF = async (
     const bottomMargin = 90;
 
     quoteData.services.forEach((service, index) => {
+      // Calculate remarks lines to determine row height
+      const remarksMaxWidth = colPaxX - colServiceX - 5;
+      let remarksLines: string[] = [];
+      if (service.remarks) {
+        pdf.setFontSize(8);
+        remarksLines = pdf.splitTextToSize(`Remarks: ${service.remarks}`, remarksMaxWidth);
+        pdf.setFontSize(10);
+      }
+      const remarksHeight = remarksLines.length > 0 ? (remarksLines.length * 4) + 3 : 0;
+      const totalRowHeight = rowHeight + remarksHeight;
+
       // simple page break handling
-      if (y > pageHeight - bottomMargin) {
+      if (y + totalRowHeight > pageHeight - bottomMargin) {
         pdf.addPage();
         pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
         y = 40;
@@ -296,20 +307,21 @@ export const generateQuotationPDF = async (
         : 0;
 
       pdf.text(String(index + 1), colNoX, y);
-      pdf.text(service.description, colServiceX, y, { maxWidth: colPaxX - colServiceX - 5 });
+      pdf.text(service.description, colServiceX, y, { maxWidth: remarksMaxWidth });
       pdf.text(service.pax.toLocaleString('en-IN'), colPaxX, y, { align: 'right' });
       pdf.text(formatCurrency(service.price), colPriceX, y, { align: 'right' });
       pdf.text(formatCurrency(serviceTotal), colAmountX, y, { align: 'right' });
       pdf.text(formatCurrency(serviceGst), colGstX, y, { align: 'right' });
 
       // Add remarks below description if present
-      if (service.remarks) {
+      if (remarksLines.length > 0) {
         y += 5;
         pdf.setFontSize(8);
         pdf.setTextColor('#666666');
-        pdf.text(`Remarks: ${service.remarks}`, colServiceX, y, { maxWidth: colPaxX - colServiceX - 5 });
+        pdf.text(remarksLines, colServiceX, y);
         pdf.setFontSize(10);
         pdf.setTextColor('#000000');
+        y += (remarksLines.length - 1) * 4;
       }
 
       y += rowHeight;
