@@ -16,7 +16,7 @@ import { useState } from "react"; // Keep useState for QuoteFlow
 
 const queryClient = new QueryClient();
 
-const QuoteFlow = () => {
+const  = () => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<'form' | 'images'>('form');
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
