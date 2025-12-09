@@ -29,7 +29,6 @@ export interface QuoteData {
   nonInclusiveItems: string;
   gstIncluded: boolean;
   gstPercentage: number;
-  // new optional fields
   invoiceNumber?: string;
   issueDate?: string;
   discountAmount?: number;
@@ -47,7 +46,7 @@ const BRANDS = {
   nosh: {
     name: 'Nosh N Shots',
     tagline: '',
-    email: 'info@shaadiplatform.com',
+    email: 'info@noshnshots.com',
     phone: '+91-9990837771',
   }
 };
@@ -57,8 +56,49 @@ const QUOTATION_TEMPLATE_URL = '/templates/shaadi_quotation_a4.png';
 
 // Utility function to format currency
 const formatCurrency = (amount: number): string => {
-  return `Rs ${amount.toLocaleString('en-IN')}`;
+  return `${amount.toLocaleString('en-IN')}`;
 };
+
+// Utility: Break text every n characters (hard wrap)
+/**
+ * Wrap text based on:
+ * - Max 4 words per line
+ * - Max 24 characters per line
+ * - Never break a word
+ */
+const wrapSmart = (text: string, maxWords = 4, maxChars = 24): string[] => {
+  if (!text) return [''];
+
+  const words = text.split(/\s+/);
+  let lines: string[] = [];
+  let currentLine: string[] = [];
+  let currentLength = 0;
+
+  for (const word of words) {
+    const wordLength = word.length;
+
+    // If adding this word exceeds char OR word limit → push line & start new
+    if (
+      currentLine.length >= maxWords || 
+      (currentLength + wordLength + (currentLine.length > 0 ? 1 : 0)) > maxChars
+    ) {
+      lines.push(currentLine.join(" "));
+      currentLine = [word];
+      currentLength = wordLength;
+    } else {
+      currentLine.push(word);
+      currentLength += wordLength + (currentLine.length > 1 ? 1 : 0);
+    }
+  }
+
+  // push the final line
+  if (currentLine.length > 0) {
+    lines.push(currentLine.join(" "));
+  }
+
+  return lines;
+};
+
 
 // Utility function to load image with CORS handling and fallbacks
 const loadImageWithFallback = async (url: string): Promise<string> => {
@@ -82,17 +122,17 @@ const loadImageWithFallback = async (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    
+
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Could not get canvas context');
-        
+
         canvas.width = img.width;
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
-        
+
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         resolve(dataUrl);
       } catch (canvasError) {
@@ -105,7 +145,7 @@ const loadImageWithFallback = async (url: string): Promise<string> => {
         });
       }
     };
-    
+
     img.onerror = () => {
       console.log(`Image load failed for ${url}, trying CORS proxy`);
       // Method 3: Try CORS proxy
@@ -115,7 +155,7 @@ const loadImageWithFallback = async (url: string): Promise<string> => {
         resolve(generatePlaceholderImage());
       });
     };
-    
+
     img.src = url;
   });
 };
@@ -124,7 +164,7 @@ const loadImageWithFallback = async (url: string): Promise<string> => {
 const loadImageDirect = async (url: string): Promise<string> => {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  
+
   const blob = await response.blob();
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -139,25 +179,25 @@ const generatePlaceholderImage = (): string => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
-  
+
   canvas.width = 400;
   canvas.height = 300;
-  
+
   // Draw a simple placeholder
   ctx.fillStyle = '#f0f0f0';
   ctx.fillRect(0, 0, 400, 300);
-  
+
   ctx.fillStyle = '#999';
   ctx.font = '20px Arial';
   ctx.textAlign = 'center';
   ctx.fillText('Banquet Image', 200, 140);
   ctx.fillText('Could not load', 200, 170);
-  
+
   // Add a simple border
   ctx.strokeStyle = '#ccc';
   ctx.lineWidth = 2;
   ctx.strokeRect(1, 1, 398, 298);
-  
+
   return canvas.toDataURL('image/jpeg', 0.8);
 };
 
@@ -258,80 +298,131 @@ export const generateQuotationPDF = async (
     y += 10;
     pdf.setFontSize(10);
 
+    // Column X positions (define once)
     const colNoX = 20;
     const colServiceX = 32;
     const colPaxX = 85;
     const colPriceX = 115;
-    const colAmountX = 150;
-    const colGstX = 188;
+    const colGstX = 150;
+    const colAmountX = 188;
 
+    // Column widths & centers (use these for headers + rows)
+    const paxWidth = colPriceX - colPaxX;
+    const priceWidth = colGstX - colPriceX;
+    const gstWidth = colAmountX - colGstX;
+    const amountWidth = pageWidth - colAmountX - 20; // right margin
+    const paxCenter = colPaxX + paxWidth / 2;
+    const priceCenter = colPriceX + priceWidth / 2;
+    const gstCenter = colGstX + gstWidth / 2;
+    const amountCenter = colAmountX + amountWidth / 2;
+
+    // Draw headers (numeric headers centered)
     pdf.text('NO', colNoX, y);
     pdf.text('DESCRIPTION', colServiceX, y);
-    pdf.text('PAX', colPaxX, y, { align: 'right' });
-    pdf.text('PRICE', colPriceX, y, { align: 'right' });
-    pdf.text('AMOUNT', colAmountX, y, { align: 'right' });
-    pdf.text('GST', colGstX, y, { align: 'right' });
+    pdf.text('PAX', paxCenter, y, { align: 'center' });
+    pdf.text('PRICE', priceCenter, y, { align: 'center' });
+    pdf.text('GST', gstCenter, y, { align: 'center' });
+    pdf.text('AMOUNT', amountCenter, y, { align: 'center' });
 
     // ---------- TABLE ROWS ----------
     y += 8;
     pdf.setFont('helvetica', 'normal');
 
     let subtotal = 0;
-    const rowHeight = 7;
     const bottomMargin = 90;
 
     quoteData.services.forEach((service, index) => {
-      // Calculate remarks lines to determine row height
-      const remarksMaxWidth = colPaxX - colServiceX - 5;
-      let remarksLines: string[] = [];
-      if (service.remarks) {
-        pdf.setFontSize(8);
-        remarksLines = pdf.splitTextToSize(`Remarks: ${service.remarks}`, remarksMaxWidth);
-        pdf.setFontSize(10);
-      }
-      const remarksHeight = remarksLines.length > 0 ? (remarksLines.length * 4) + 3 : 0;
-      const totalRowHeight = rowHeight + remarksHeight;
+      // ---------- Fonts & wrapping ----------
+      const bodyFontSize = 10;
+      const remarkFontSize = 8;
+      pdf.setFontSize(bodyFontSize);
 
-      // simple page break handling
-      if (y + totalRowHeight > pageHeight - bottomMargin) {
+      // Wrap description after every 24 chars
+      const descriptionLines = wrapSmart(service.description || '', 4,30);
+
+      // Wrap remarks similarly (hard wrap)
+      pdf.setFontSize(remarkFontSize);
+      const remarksLines = service.remarks 
+  ? wrapSmart(`Remarks: ${service.remarks}`, 4, 30)
+  : [];
+
+      pdf.setFontSize(bodyFontSize);
+
+      // ---------- Heights ----------
+      const lineHeight = 4.2; // mm per line (adjust if you change font size)
+      const descriptionHeight = descriptionLines.length * lineHeight;
+      const remarksHeight = remarksLines.length ? remarksLines.length * (lineHeight - 1.2) + 4 : 0;
+      const leftBlockHeight = descriptionHeight + remarksHeight;
+      const singleLineHeight = lineHeight;
+      const requiredRowHeight = Math.max(leftBlockHeight, singleLineHeight) + 6; // extra padding
+
+      // ---------- Page break if needed ----------
+      if (y + requiredRowHeight > pageHeight - bottomMargin) {
         pdf.addPage();
         pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
         y = 40;
       }
 
-      const serviceTotal = service.pax * service.price;
+      // ---------- Calculations ----------
+      const serviceTotal = (service.pax || 0) * (service.price || 0);
       subtotal += serviceTotal;
 
-      // Calculate GST for this service
       const serviceGst = (!service.excludeGst && quoteData.gstIncluded && quoteData.gstPercentage > 0)
         ? (serviceTotal * quoteData.gstPercentage) / 100
         : 0;
 
+      // ---------- Rendering ----------
+      // NO (left column — keep left aligned)
+      pdf.setFontSize(bodyFontSize);
       pdf.text(String(index + 1), colNoX, y);
-      pdf.text(service.description, colServiceX, y, { maxWidth: remarksMaxWidth });
-      pdf.text(service.pax.toLocaleString('en-IN'), colPaxX, y, { align: 'right' });
-      pdf.text(formatCurrency(service.price), colPriceX, y, { align: 'right' });
-      pdf.text(formatCurrency(serviceTotal), colAmountX, y, { align: 'right' });
-      pdf.text(formatCurrency(serviceGst), colGstX, y, { align: 'right' });
 
-      // Add remarks below description if present
+      // DESCRIPTION (multi-line, left aligned)
+      pdf.text(descriptionLines, colServiceX, y);
+
+      // REMARKS (if any) below description
       if (remarksLines.length > 0) {
-        y += 5;
-        pdf.setFontSize(8);
+        const remarksStartY = y + descriptionHeight + 2;
+        pdf.setFontSize(remarkFontSize);
         pdf.setTextColor('#666666');
-        pdf.text(remarksLines, colServiceX, y);
-        pdf.setFontSize(10);
+        pdf.text(remarksLines, colServiceX, remarksStartY);
+        pdf.setFontSize(bodyFontSize);
         pdf.setTextColor('#000000');
-        y += (remarksLines.length - 1) * 4;
       }
 
-      y += rowHeight;
+      // Compute Y for numeric cells (top-aligned inside the row)
+      const numericY = y; // top aligned, same as DESCRIPTION
+
+      // ---------- Horizontal CENTER for numeric columns ----------
+      pdf.text(service.pax.toLocaleString('en-IN'), paxCenter, numericY, { align: 'center' });
+      pdf.text(formatCurrency(service.price), priceCenter, numericY, { align: 'center' });
+      pdf.text(formatCurrency(serviceGst), gstCenter, numericY, { align: 'center' });
+      pdf.text(formatCurrency(serviceTotal), amountCenter, numericY, { align: 'center' });
+
+      // advance y by the computed row height
+      y += requiredRowHeight;
     });
+    // Smooth spacing before totals block
+const spaceBeforeTotals = 15; // increase or decrease for your taste
+y += spaceBeforeTotals;
 
-    // ---------- TOTALS BLOCK ----------
-    const minTotalsY = 190;
-    y = Math.max(y + 15, minTotalsY);
+// Prevent totals from going too high on page 1
+const minTotalsY = 180;
+if (y < minTotalsY) y = minTotalsY;
 
+
+    // ---------- TOTALS BLOCK (place directly after table rows) ----------
+    // ensure totals fit; compute space needed conservatively
+    const totalsBlockHeight = 50; // estimated height needed for subtotal/gst/discount/total (tweak if necessary)
+    const bottomSafe = 40;
+
+    if (y + totalsBlockHeight > pageHeight - bottomSafe) {
+      // not enough room — start a new page so totals won't be split
+      pdf.addPage();
+      pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+      y = 40;
+    }
+
+    // Draw totals
     const totalsLabelX = 120;
     const totalsValueX = 188;
 
@@ -380,6 +471,33 @@ export const generateQuotationPDF = async (
     pdf.text('Total Amount:', totalsLabelX, y);
     pdf.text(formatCurrency(total), totalsValueX, y, { align: 'right' });
 
+    // add some space after totals before next section
+    y += 12;
+
+    // ---------- NON-INCLUSIVE ITEMS (render AFTER totals) ----------
+    if (quoteData.nonInclusiveItems) {
+      const nonInclusiveLines = pdf.splitTextToSize(quoteData.nonInclusiveItems, pageWidth - 40);
+      const nonInclusiveHeight = nonInclusiveLines.length * 4 + 12; // approximate required height
+
+      // If not enough space for non-inclusive, move to next page
+      if (y + nonInclusiveHeight > pageHeight - 40) {
+        pdf.addPage();
+        pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+        y = 40;
+      }
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.text('Non-Inclusive Items:', 20, y);
+      y += 6;
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      pdf.text(nonInclusiveLines, 20, y);
+      y += nonInclusiveHeight;
+    }
+
+
     // ---------- NOTES ----------
     y += 15;
     if (quoteData.notes) {
@@ -389,16 +507,16 @@ export const generateQuotationPDF = async (
         pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
         y = 40;
       }
-      
+
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       pdf.text('Notes:', 20, y);
       y += 6;
-      
+
       pdf.setFont('helvetica', 'italic');
       pdf.setFontSize(9);
       const notesLines = pdf.splitTextToSize(quoteData.notes, pageWidth - 40);
-      
+
       // Check if notes content needs page break
       const notesHeight = notesLines.length * 4;
       if (y + notesHeight > pageHeight - 40) {
@@ -406,38 +524,9 @@ export const generateQuotationPDF = async (
         pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
         y = 40;
       }
-      
+
       pdf.text(notesLines, 20, y);
       y += notesHeight + 5;
-    }
-
-    // ---------- NON-INCLUSIVE ITEMS ----------
-    if (quoteData.nonInclusiveItems) {
-      // Check if we need a new page
-      if (y > pageHeight - 60) {
-        pdf.addPage();
-        pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
-        y = 40;
-      }
-      
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(10);
-      pdf.text('Non-Inclusive Items:', 20, y);
-      y += 6;
-      
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(9);
-      const nonInclusiveLines = pdf.splitTextToSize(quoteData.nonInclusiveItems, pageWidth - 40);
-      
-      // Check if content needs page break
-      const contentHeight = nonInclusiveLines.length * 4;
-      if (y + contentHeight > pageHeight - 40) {
-        pdf.addPage();
-        pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
-        y = 40;
-      }
-      
-      pdf.text(nonInclusiveLines, 20, y);
     }
 
     const fileName = `${sanitizeFileName(quoteData.venueName)}_quotation_${Date.now()}.pdf`;
@@ -448,14 +537,15 @@ export const generateQuotationPDF = async (
   }
 };
 
+// (keep your generateGalleryPDF as-is or reuse the previous copy)
 export const generateGalleryPDF = async (
-  banquetName: string, 
-  city: string, 
+  banquetName: string,
+  city: string,
   selectedImages: string[]
 ): Promise<void> => {
   try {
     const pdf = new jsPDF('p', 'mm', 'a4');
-    
+
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const primaryColor = '#601220';
@@ -488,66 +578,54 @@ export const generateGalleryPDF = async (
     const imgWidth = pageWidth - 40; // Full width with margins
     const margin = 20;
     let successfulImages = 0;
-    
-    console.log(`Starting to process ${selectedImages.length} images for PDF gallery`);
-    
+
     for (let i = 0; i < selectedImages.length; i++) {
       const imageUrl = selectedImages[i];
-      console.log(`Processing image ${i + 1}: ${imageUrl}`);
-      
+
       try {
         const dataUrl = await loadImageWithFallback(imageUrl);
-        console.log(`Successfully loaded image ${i + 1}`);
-        
+
         // Check if we need a new page
         if (yPosition > pageHeight - 150) {
           pdf.addPage();
           yPosition = 20;
         }
-        
+
         // Create a temporary image to get dimensions
         const tempImg = document.createElement('img');
         tempImg.src = dataUrl;
-        
+
         await new Promise((resolve, reject) => {
           tempImg.onload = () => {
             try {
               const aspectRatio = tempImg.width / tempImg.height;
               let imgHeight = imgWidth / aspectRatio;
-              
+
               // Limit image height to prevent overflow
               const maxHeight = pageHeight - yPosition - 50;
               if (imgHeight > maxHeight) {
                 imgHeight = maxHeight;
               }
-              
+
               // Add image to PDF
               pdf.addImage(dataUrl, 'JPEG', margin, yPosition, imgWidth, imgHeight);
               yPosition += imgHeight + 15;
-              
+
               // Add a caption
               pdf.setFontSize(10);
               pdf.setTextColor('#666666');
               pdf.text(`Image ${i + 1} of ${selectedImages.length}`, pageWidth / 2, yPosition - 5, { align: 'center' });
-              
+
               successfulImages++;
-              console.log(`Successfully added image ${i + 1} to PDF`);
               resolve(true);
             } catch (pdfError) {
-              console.error(`Error adding image ${i + 1} to PDF:`, pdfError);
               reject(pdfError);
             }
           };
-          
-          tempImg.onerror = () => {
-            console.error(`Failed to load temp image ${i + 1}`);
-            reject(new Error('Failed to load image'));
-          };
+
+          tempImg.onerror = () => reject(new Error('Failed to load image'));
         });
-        
       } catch (error) {
-        console.error(`Failed to process image ${i + 1} (${imageUrl}):`, error);
-        
         // Add placeholder for failed image
         pdf.setFontSize(12);
         pdf.setTextColor('#999999');
@@ -558,17 +636,14 @@ export const generateGalleryPDF = async (
         pdf.setTextColor(textColor);
       }
     }
-    
-    console.log(`Successfully processed ${successfulImages} out of ${selectedImages.length} images`);
 
     // Footer
     pdf.setDrawColor(borderColor);
     pdf.line(20, pageHeight - 30, pageWidth - 20, pageHeight - 30);
-    
+
     pdf.setTextColor('#666666');
     pdf.setFontSize(9);
-    pdf.text(`• Generated on: ${new Date().toLocaleDateString('en-IN')}`, 
-             pageWidth / 2, pageHeight - 15, { align: 'center' });
+    pdf.text(`• Generated on: ${new Date().toLocaleDateString('en-IN')}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
 
     const fileName = `${sanitizeFileName(banquetName)}_gallery_${Date.now()}.pdf`;
     pdf.save(fileName);
