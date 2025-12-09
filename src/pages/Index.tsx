@@ -35,6 +35,7 @@ interface QuoteData {
   endDate: string;
   services: Service[];
   notes: string;
+  nonInclusiveItems: string;
   gstIncluded: boolean;
   gstPercentage: number;
   discountAmount?: number;

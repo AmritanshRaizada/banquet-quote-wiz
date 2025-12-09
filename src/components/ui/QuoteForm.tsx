@@ -34,6 +34,7 @@ interface QuoteData {
   endDate: string;
   services: Service[];
   notes: string;
+  nonInclusiveItems: string;
   gstIncluded: boolean;
   gstPercentage: number;
   discountAmount?: number;
@@ -63,6 +64,7 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
       }
     ],
     notes: "",
+    nonInclusiveItems: "",
     gstIncluded: false,
     gstPercentage: 0,
     discountAmount: 0,
@@ -366,6 +368,17 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             placeholder="Any special requirements or notes..."
+            className="min-h-[100px] border-border focus:ring-primary"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="nonInclusiveItems" className="text-foreground">Non-Inclusive Items</Label>
+          <Textarea
+            id="nonInclusiveItems"
+            value={formData.nonInclusiveItems}
+            onChange={(e) => setFormData({ ...formData, nonInclusiveItems: e.target.value })}
+            placeholder="Items not included in this quotation..."
             className="min-h-[100px] border-border focus:ring-primary"
           />
         </div>

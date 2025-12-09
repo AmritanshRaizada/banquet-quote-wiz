@@ -26,6 +26,7 @@ export interface QuoteData {
   endDate: string;
   services: Service[];
   notes: string;
+  nonInclusiveItems: string;
   gstIncluded: boolean;
   gstPercentage: number;
   // new optional fields
@@ -380,14 +381,63 @@ export const generateQuotationPDF = async (
     pdf.text(formatCurrency(total), totalsValueX, y, { align: 'right' });
 
     // ---------- NOTES ----------
+    y += 15;
     if (quoteData.notes) {
-      const notesY = y + 15;
-      if (notesY < pageHeight - 40) {
-        pdf.setFont('helvetica', 'italic');
-        pdf.setFontSize(9);
-        const notesLines = pdf.splitTextToSize(quoteData.notes, pageWidth - 40);
-        pdf.text(notesLines, 20, notesY);
+      // Check if we need a new page
+      if (y > pageHeight - 60) {
+        pdf.addPage();
+        pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+        y = 40;
       }
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.text('Notes:', 20, y);
+      y += 6;
+      
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(9);
+      const notesLines = pdf.splitTextToSize(quoteData.notes, pageWidth - 40);
+      
+      // Check if notes content needs page break
+      const notesHeight = notesLines.length * 4;
+      if (y + notesHeight > pageHeight - 40) {
+        pdf.addPage();
+        pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+        y = 40;
+      }
+      
+      pdf.text(notesLines, 20, y);
+      y += notesHeight + 5;
+    }
+
+    // ---------- NON-INCLUSIVE ITEMS ----------
+    if (quoteData.nonInclusiveItems) {
+      // Check if we need a new page
+      if (y > pageHeight - 60) {
+        pdf.addPage();
+        pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+        y = 40;
+      }
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.text('Non-Inclusive Items:', 20, y);
+      y += 6;
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      const nonInclusiveLines = pdf.splitTextToSize(quoteData.nonInclusiveItems, pageWidth - 40);
+      
+      // Check if content needs page break
+      const contentHeight = nonInclusiveLines.length * 4;
+      if (y + contentHeight > pageHeight - 40) {
+        pdf.addPage();
+        pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+        y = 40;
+      }
+      
+      pdf.text(nonInclusiveLines, 20, y);
     }
 
     const fileName = `${sanitizeFileName(quoteData.venueName)}_quotation_${Date.now()}.pdf`;
