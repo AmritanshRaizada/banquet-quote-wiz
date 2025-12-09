@@ -309,7 +309,7 @@ export const generateQuotationPDF = async (
     y = Math.max(y + 15, minTotalsY);
 
     const totalsLabelX = 120;
-    const totalsValueX = colAmountX;
+    const totalsValueX = 188;
 
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(11);
