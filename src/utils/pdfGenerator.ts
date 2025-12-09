@@ -10,6 +10,7 @@ export interface Banquet {
 
 interface Service {
   description: string;
+  remarks: string;
   pax: number;
   price: number;
   excludeGst: boolean;
@@ -300,6 +301,16 @@ export const generateQuotationPDF = async (
       pdf.text(formatCurrency(service.price), colPriceX, y, { align: 'right' });
       pdf.text(formatCurrency(serviceTotal), colAmountX, y, { align: 'right' });
       pdf.text(formatCurrency(serviceGst), colGstX, y, { align: 'right' });
+
+      // Add remarks below description if present
+      if (service.remarks) {
+        y += 5;
+        pdf.setFontSize(8);
+        pdf.setTextColor('#666666');
+        pdf.text(`Remarks: ${service.remarks}`, colServiceX, y, { maxWidth: colPaxX - colServiceX - 5 });
+        pdf.setFontSize(10);
+        pdf.setTextColor('#000000');
+      }
 
       y += rowHeight;
     });

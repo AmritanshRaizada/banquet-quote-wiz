@@ -19,6 +19,7 @@ interface Banquet {
 
 interface Service {
   description: string;
+  remarks: string;
   pax: number;
   price: number;
   excludeGst: boolean;
