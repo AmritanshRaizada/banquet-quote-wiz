@@ -422,6 +422,64 @@ export const generateQuotationPDF = async (
     const totalsLabelX = 120;
     const totalsValueX = 188;
 
+    // Calculate notes area (left side of totals)
+    const notesLeftX = 20;
+    const notesMaxWidth = 90; // Space left of totals
+    const notesStartY = y;
+    
+    // Pre-calculate notes content
+    let notesLines: string[] = [];
+    let notesHeight = 0;
+    let nonInclusiveLines: string[] = [];
+    let nonInclusiveHeight = 0;
+    
+    if (quoteData.notes) {
+      notesLines = pdf.splitTextToSize(quoteData.notes, notesMaxWidth);
+      notesHeight = notesLines.length * 4 + 10; // lines + heading
+    }
+    
+    if (quoteData.nonInclusiveItems) {
+      nonInclusiveLines = pdf.splitTextToSize(quoteData.nonInclusiveItems, notesMaxWidth);
+      nonInclusiveHeight = nonInclusiveLines.length * 4 + 10; // lines + heading
+    }
+    
+    const totalNotesHeight = notesHeight + nonInclusiveHeight;
+    const availableSpaceForNotes = termsFooterY - notesStartY;
+    const fitsBesideTotals = totalNotesHeight <= availableSpaceForNotes;
+
+    // Draw notes beside totals if they fit
+    let notesY = notesStartY;
+    let notesRenderedBesideTotals = false;
+    let nonInclusiveRenderedBesideTotals = false;
+    
+    if (fitsBesideTotals && (quoteData.notes || quoteData.nonInclusiveItems)) {
+      // Render notes on the left side of totals
+      if (quoteData.notes) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.text('Notes:', notesLeftX, notesY);
+        notesY += 5;
+        
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(9);
+        pdf.text(notesLines, notesLeftX, notesY);
+        notesY += notesLines.length * 4 + 5;
+        notesRenderedBesideTotals = true;
+      }
+      
+      if (quoteData.nonInclusiveItems) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.text('Non-Inclusive Items:', notesLeftX, notesY);
+        notesY += 5;
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.text(nonInclusiveLines, notesLeftX, notesY);
+        nonInclusiveRenderedBesideTotals = true;
+      }
+    }
+
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(11);
 
@@ -467,50 +525,48 @@ export const generateQuotationPDF = async (
     pdf.text('Total Amount:', totalsLabelX, y);
     pdf.text(formatCurrency(total), totalsValueX, y, { align: 'right' });
 
-    // ---------- NOTES & NON-INCLUSIVE ITEMS (always on new page if present) ----------
-    const hasNotesSection = quoteData.notes || quoteData.nonInclusiveItems;
-    
-    if (hasNotesSection) {
-      // Always start notes/non-inclusive on a new page
+    // ---------- NOTES & NON-INCLUSIVE ITEMS (on new page if didn't fit beside totals) ----------
+    if (!fitsBesideTotals && (quoteData.notes || quoteData.nonInclusiveItems)) {
+      // Start notes/non-inclusive on a new page
       pdf.addPage();
       pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
-      y = 40;
+      let newPageY = 40;
+      const fullNotesWidth = pageWidth - 40;
 
       // ---------- NOTES ----------
       if (quoteData.notes) {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(10);
-        pdf.text('Notes:', 20, y);
-        y += 6;
+        pdf.text('Notes:', 20, newPageY);
+        newPageY += 6;
 
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(9);
-        const notesLines = pdf.splitTextToSize(quoteData.notes, pageWidth - 40);
-        pdf.text(notesLines, 20, y);
-        y += notesLines.length * 4 + 10;
+        const fullNotesLines = pdf.splitTextToSize(quoteData.notes, fullNotesWidth);
+        pdf.text(fullNotesLines, 20, newPageY);
+        newPageY += fullNotesLines.length * 4 + 10;
       }
 
       // ---------- NON-INCLUSIVE ITEMS ----------
       if (quoteData.nonInclusiveItems) {
         // Check if we need page break for non-inclusive items
-        const nonInclusiveLines = pdf.splitTextToSize(quoteData.nonInclusiveItems, pageWidth - 40);
-        const nonInclusiveHeight = nonInclusiveLines.length * 4 + 12;
+        const fullNonInclusiveLines = pdf.splitTextToSize(quoteData.nonInclusiveItems, fullNotesWidth);
+        const fullNonInclusiveHeight = fullNonInclusiveLines.length * 4 + 12;
 
-        if (y + nonInclusiveHeight > termsFooterY) {
+        if (newPageY + fullNonInclusiveHeight > termsFooterY) {
           pdf.addPage();
           pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
-          y = 40;
+          newPageY = 40;
         }
 
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(10);
-        pdf.text('Non-Inclusive Items:', 20, y);
-        y += 6;
+        pdf.text('Non-Inclusive Items:', 20, newPageY);
+        newPageY += 6;
 
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
-        pdf.text(nonInclusiveLines, 20, y);
-        y += nonInclusiveHeight;
+        pdf.text(fullNonInclusiveLines, 20, newPageY);
       }
     }
     const fileName = `${sanitizeFileName(quoteData.venueName)}_quotation_${Date.now()}.pdf`;
