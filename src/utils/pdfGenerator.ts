@@ -402,21 +402,17 @@ export const generateQuotationPDF = async (
       y += requiredRowHeight;
     });
     // Smooth spacing before totals block
-const spaceBeforeTotals = 15; // increase or decrease for your taste
-y += spaceBeforeTotals;
-
-// Prevent totals from going too high on page 1
-const minTotalsY = 180;
-if (y < minTotalsY) y = minTotalsY;
-
+    const spaceBeforeTotals = 15;
+    y += spaceBeforeTotals;
 
     // ---------- TOTALS BLOCK (place directly after table rows) ----------
-    // ensure totals fit; compute space needed conservatively
-    const totalsBlockHeight = 50; // estimated height needed for subtotal/gst/discount/total (tweak if necessary)
-    const bottomSafe = 40;
+    // Totals block height: subtotal + gst + discount + total lines + spacing
+    const totalsBlockHeight = 45;
+    // Only check against T&C footer area (around y=255 on template)
+    const termsFooterY = 255;
 
-    if (y + totalsBlockHeight > pageHeight - bottomSafe) {
-      // not enough room — start a new page so totals won't be split
+    // Only add new page if totals would overlap T&C footer area
+    if (y + totalsBlockHeight > termsFooterY) {
       pdf.addPage();
       pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
       y = 40;
@@ -471,64 +467,52 @@ if (y < minTotalsY) y = minTotalsY;
     pdf.text('Total Amount:', totalsLabelX, y);
     pdf.text(formatCurrency(total), totalsValueX, y, { align: 'right' });
 
-    // add some space after totals before next section
-    y += 12;
+    // ---------- NOTES & NON-INCLUSIVE ITEMS (always on new page if present) ----------
+    const hasNotesSection = quoteData.notes || quoteData.nonInclusiveItems;
+    
+    if (hasNotesSection) {
+      // Always start notes/non-inclusive on a new page
+      pdf.addPage();
+      pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+      y = 40;
 
-    // ---------- NON-INCLUSIVE ITEMS (render AFTER totals) ----------
-    if (quoteData.nonInclusiveItems) {
-      const nonInclusiveLines = pdf.splitTextToSize(quoteData.nonInclusiveItems, pageWidth - 40);
-      const nonInclusiveHeight = nonInclusiveLines.length * 4 + 12; // approximate required height
+      // ---------- NOTES ----------
+      if (quoteData.notes) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.text('Notes:', 20, y);
+        y += 6;
 
-      // If not enough space for non-inclusive, move to next page
-      if (y + nonInclusiveHeight > pageHeight - 40) {
-        pdf.addPage();
-        pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
-        y = 40;
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(9);
+        const notesLines = pdf.splitTextToSize(quoteData.notes, pageWidth - 40);
+        pdf.text(notesLines, 20, y);
+        y += notesLines.length * 4 + 10;
       }
 
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(10);
-      pdf.text('Non-Inclusive Items:', 20, y);
-      y += 6;
+      // ---------- NON-INCLUSIVE ITEMS ----------
+      if (quoteData.nonInclusiveItems) {
+        // Check if we need page break for non-inclusive items
+        const nonInclusiveLines = pdf.splitTextToSize(quoteData.nonInclusiveItems, pageWidth - 40);
+        const nonInclusiveHeight = nonInclusiveLines.length * 4 + 12;
 
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(9);
-      pdf.text(nonInclusiveLines, 20, y);
-      y += nonInclusiveHeight;
+        if (y + nonInclusiveHeight > termsFooterY) {
+          pdf.addPage();
+          pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+          y = 40;
+        }
+
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.text('Non-Inclusive Items:', 20, y);
+        y += 6;
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.text(nonInclusiveLines, 20, y);
+        y += nonInclusiveHeight;
+      }
     }
-
-
-    // ---------- NOTES ----------
-    y += 15;
-    if (quoteData.notes) {
-      // Check if we need a new page
-      if (y > pageHeight - 60) {
-        pdf.addPage();
-        pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
-        y = 40;
-      }
-
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(10);
-      pdf.text('Notes:', 20, y);
-      y += 6;
-
-      pdf.setFont('helvetica', 'italic');
-      pdf.setFontSize(9);
-      const notesLines = pdf.splitTextToSize(quoteData.notes, pageWidth - 40);
-
-      // Check if notes content needs page break
-      const notesHeight = notesLines.length * 4;
-      if (y + notesHeight > pageHeight - 40) {
-        pdf.addPage();
-        pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
-        y = 40;
-      }
-
-      pdf.text(notesLines, 20, y);
-      y += notesHeight + 5;
-    }
-
     const fileName = `${sanitizeFileName(quoteData.venueName)}_quotation_${Date.now()}.pdf`;
     pdf.save(fileName);
   } catch (error) {
