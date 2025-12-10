@@ -426,35 +426,29 @@ export const generateQuotationPDF = async (
     const notesLeftX = 20;
     const notesMaxWidth = 90; // Space left of totals
     const notesStartY = y;
+    const lineHeight = 4;
     
     // Pre-calculate notes content
     let notesLines: string[] = [];
-    let notesHeight = 0;
     let nonInclusiveLines: string[] = [];
-    let nonInclusiveHeight = 0;
     
     if (quoteData.notes) {
       notesLines = pdf.splitTextToSize(quoteData.notes, notesMaxWidth);
-      notesHeight = notesLines.length * 4 + 10; // lines + heading
     }
     
     if (quoteData.nonInclusiveItems) {
       nonInclusiveLines = pdf.splitTextToSize(quoteData.nonInclusiveItems, notesMaxWidth);
-      nonInclusiveHeight = nonInclusiveLines.length * 4 + 10; // lines + heading
     }
     
-    const totalNotesHeight = notesHeight + nonInclusiveHeight;
-    const availableSpaceForNotes = termsFooterY - notesStartY;
-    const fitsBesideTotals = totalNotesHeight <= availableSpaceForNotes;
-
-    // Draw notes beside totals if they fit
+    // Track which lines overflow to next page
+    let notesOverflowLines: string[] = [];
+    let nonInclusiveOverflowLines: string[] = [];
     let notesY = notesStartY;
-    let notesRenderedBesideTotals = false;
-    let nonInclusiveRenderedBesideTotals = false;
     
-    if (fitsBesideTotals && (quoteData.notes || quoteData.nonInclusiveItems)) {
+    // Always render notes beside totals, tracking overflow
+    if (quoteData.notes || quoteData.nonInclusiveItems) {
       // Render notes on the left side of totals
-      if (quoteData.notes) {
+      if (quoteData.notes && notesLines.length > 0) {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(10);
         pdf.text('Notes:', notesLeftX, notesY);
@@ -462,21 +456,48 @@ export const generateQuotationPDF = async (
         
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(9);
-        pdf.text(notesLines, notesLeftX, notesY);
-        notesY += notesLines.length * 4 + 5;
-        notesRenderedBesideTotals = true;
+        
+        // Render lines that fit, track overflow
+        for (let i = 0; i < notesLines.length; i++) {
+          if (notesY + lineHeight > termsFooterY) {
+            // Rest goes to overflow
+            notesOverflowLines = notesLines.slice(i);
+            break;
+          }
+          pdf.text(notesLines[i], notesLeftX, notesY);
+          notesY += lineHeight;
+        }
+        notesY += 5;
       }
       
-      if (quoteData.nonInclusiveItems) {
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(10);
-        pdf.text('Non-Inclusive Items:', notesLeftX, notesY);
-        notesY += 5;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(9);
-        pdf.text(nonInclusiveLines, notesLeftX, notesY);
-        nonInclusiveRenderedBesideTotals = true;
+      // Only render non-inclusive if notes didn't overflow AND we have space
+      if (quoteData.nonInclusiveItems && nonInclusiveLines.length > 0 && notesOverflowLines.length === 0) {
+        if (notesY + 10 < termsFooterY) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(10);
+          pdf.text('Non-Inclusive Items:', notesLeftX, notesY);
+          notesY += 5;
+          
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(9);
+          
+          // Render lines that fit, track overflow
+          for (let i = 0; i < nonInclusiveLines.length; i++) {
+            if (notesY + lineHeight > termsFooterY) {
+              // Rest goes to overflow
+              nonInclusiveOverflowLines = nonInclusiveLines.slice(i);
+              break;
+            }
+            pdf.text(nonInclusiveLines[i], notesLeftX, notesY);
+            notesY += lineHeight;
+          }
+        } else {
+          // All non-inclusive goes to overflow
+          nonInclusiveOverflowLines = nonInclusiveLines;
+        }
+      } else if (quoteData.nonInclusiveItems && notesOverflowLines.length > 0) {
+        // Notes overflowed, so all non-inclusive goes to new page
+        nonInclusiveOverflowLines = nonInclusiveLines;
       }
     }
 
@@ -525,35 +546,34 @@ export const generateQuotationPDF = async (
     pdf.text('Total Amount:', totalsLabelX, y);
     pdf.text(formatCurrency(total), totalsValueX, y, { align: 'right' });
 
-    // ---------- NOTES & NON-INCLUSIVE ITEMS (on new page if didn't fit beside totals) ----------
-    if (!fitsBesideTotals && (quoteData.notes || quoteData.nonInclusiveItems)) {
-      // Start notes/non-inclusive on a new page
+    // ---------- OVERFLOW NOTES & NON-INCLUSIVE ITEMS (on new page) ----------
+    const hasOverflow = notesOverflowLines.length > 0 || nonInclusiveOverflowLines.length > 0;
+    
+    if (hasOverflow) {
       pdf.addPage();
       pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
       let newPageY = 40;
       const fullNotesWidth = pageWidth - 40;
 
-      // ---------- NOTES ----------
-      if (quoteData.notes) {
+      // ---------- CONTINUED NOTES ----------
+      if (notesOverflowLines.length > 0) {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(10);
-        pdf.text('Notes:', 20, newPageY);
+        pdf.text('Notes (continued):', 20, newPageY);
         newPageY += 6;
 
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(9);
-        const fullNotesLines = pdf.splitTextToSize(quoteData.notes, fullNotesWidth);
-        pdf.text(fullNotesLines, 20, newPageY);
-        newPageY += fullNotesLines.length * 4 + 10;
+        pdf.text(notesOverflowLines, 20, newPageY);
+        newPageY += notesOverflowLines.length * 4 + 10;
       }
 
       // ---------- NON-INCLUSIVE ITEMS ----------
-      if (quoteData.nonInclusiveItems) {
-        // Check if we need page break for non-inclusive items
-        const fullNonInclusiveLines = pdf.splitTextToSize(quoteData.nonInclusiveItems, fullNotesWidth);
-        const fullNonInclusiveHeight = fullNonInclusiveLines.length * 4 + 12;
+      if (nonInclusiveOverflowLines.length > 0) {
+        // Check if we need page break
+        const nonInclusiveHeight = nonInclusiveOverflowLines.length * 4 + 12;
 
-        if (newPageY + fullNonInclusiveHeight > termsFooterY) {
+        if (newPageY + nonInclusiveHeight > termsFooterY) {
           pdf.addPage();
           pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
           newPageY = 40;
@@ -566,7 +586,7 @@ export const generateQuotationPDF = async (
 
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
-        pdf.text(fullNonInclusiveLines, 20, newPageY);
+        pdf.text(nonInclusiveOverflowLines, 20, newPageY);
       }
     }
     const fileName = `${sanitizeFileName(quoteData.venueName)}_quotation_${Date.now()}.pdf`;
