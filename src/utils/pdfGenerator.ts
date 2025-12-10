@@ -402,16 +402,16 @@ export const generateQuotationPDF = async (
       y += requiredRowHeight;
     });
     // Smooth spacing before totals block
-    const spaceBeforeTotals = 15;
+    const spaceBeforeTotals = 10;
     y += spaceBeforeTotals;
 
     // ---------- TOTALS BLOCK (place directly after table rows) ----------
-    // Totals block height: subtotal + gst + discount + total lines + spacing
-    const totalsBlockHeight = 45;
-    // Only check against T&C footer area (around y=255 on template)
-    const termsFooterY = 255;
+    // Totals block height: subtotal + gst + discount + total lines + spacing (~40mm)
+    const totalsBlockHeight = 40;
+    // T&C footer starts around y=262 on template, so totals must end before that
+    const termsFooterY = 262;
 
-    // Only add new page if totals would overlap T&C footer area
+    // Only add new page if totals would actually overlap T&C footer area
     if (y + totalsBlockHeight > termsFooterY) {
       pdf.addPage();
       pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
