@@ -330,8 +330,8 @@ export const generateQuotationPDF = async (
 
     let subtotal = 0;
     // Use termsFooterY as the limit for table rows (T&C footer at 262mm)
-    // Leave enough space for at least one row (approx 25mm) before triggering page break
-    const tableBottomLimit = 262 - 25; // 237mm
+    // Leave minimal margin (10mm) to maximize space usage
+    const tableBottomLimit = 262 - 10; // 252mm
 
     quoteData.services.forEach((service, index) => {
       // ---------- Fonts & wrapping ----------
