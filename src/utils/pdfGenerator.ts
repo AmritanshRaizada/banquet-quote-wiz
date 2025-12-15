@@ -409,7 +409,7 @@ export const generateQuotationPDF = async (
 
     // ---------- TOTALS BLOCK (place directly after table rows) ----------
     // Totals block height: subtotal + gst + discount + total lines (~25mm actual)
-    const totalsBlockHeight = 25;
+    const totalsBlockHeight = 15;
     // T&C footer starts around y=262 on template, so totals must end before that
     const termsFooterY = 262;
 
