@@ -329,7 +329,9 @@ export const generateQuotationPDF = async (
     pdf.setFont('helvetica', 'normal');
 
     let subtotal = 0;
-    const bottomMargin = 90;
+    // Use termsFooterY as the limit for table rows (T&C footer at 262mm)
+    // Leave enough space for at least one row (approx 25mm) before triggering page break
+    const tableBottomLimit = 262 - 25; // 237mm
 
     quoteData.services.forEach((service, index) => {
       // ---------- Fonts & wrapping ----------
@@ -357,7 +359,7 @@ export const generateQuotationPDF = async (
       const requiredRowHeight = Math.max(leftBlockHeight, singleLineHeight) + 6; // extra padding
 
       // ---------- Page break if needed ----------
-      if (y + requiredRowHeight > pageHeight - bottomMargin) {
+      if (y + requiredRowHeight > tableBottomLimit) {
         pdf.addPage();
         pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
         y = 40;
