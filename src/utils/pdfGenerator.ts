@@ -13,8 +13,10 @@ interface Service {
   remarks: string;
   pax: number;
   price: number;
+  gstPercentage: number;   // 👈 ADD
   excludeGst: boolean;
 }
+
 
 export type BrandType = 'shaadi' | 'nosh';
 
@@ -27,8 +29,7 @@ export interface QuoteData {
   services: Service[];
   notes: string;
   nonInclusiveItems: string;
-  gstIncluded: boolean;
-  gstPercentage: number;
+  
   invoiceNumber?: string;
   issueDate?: string;
   discountAmount?: number;
@@ -300,21 +301,24 @@ export const generateQuotationPDF = async (
 
     // Column X positions (define once)
     const colNoX = 20;
-    const colServiceX = 32;
-    const colPaxX = 85;
-    const colPriceX = 115;
-    const colGstX = 150;
-    const colAmountX = 188;
+const colServiceX = 32;
+const colPaxX = 85;
+const colPriceX = 110;
+const colGstX = 135;     // 👈 move GST left
+const colAmountX = 165;  // 👈 move Amount left
+
 
     // Column widths & centers (use these for headers + rows)
     const paxWidth = colPriceX - colPaxX;
-    const priceWidth = colGstX - colPriceX;
-    const gstWidth = colAmountX - colGstX;
-    const amountWidth = pageWidth - colAmountX - 20; // right margin
-    const paxCenter = colPaxX + paxWidth / 2;
-    const priceCenter = colPriceX + priceWidth / 2;
-    const gstCenter = colGstX + gstWidth / 2;
-    const amountCenter = colAmountX + amountWidth / 2;
+const priceWidth = colGstX - colPriceX;
+const gstWidth = colAmountX - colGstX;
+const amountWidth = pageWidth - colAmountX - 20;
+
+const paxCenter = colPaxX + paxWidth / 2;
+const priceCenter = colPriceX + priceWidth / 2;
+const gstCenter = colGstX + gstWidth / 2;
+const amountCenter = colAmountX + amountWidth / 2;
+
 
     // Draw headers (numeric headers centered)
     pdf.text('NO', colNoX, y);
@@ -329,6 +333,8 @@ export const generateQuotationPDF = async (
     pdf.setFont('helvetica', 'normal');
 
     let subtotal = 0;
+let totalGst = 0;
+
     // Use termsFooterY as the limit for table rows (T&C footer at 262mm)
     // Leave minimal margin (10mm) to maximize space usage
     const tableBottomLimit = 262; // 252mm
@@ -366,12 +372,17 @@ export const generateQuotationPDF = async (
       }
 
       // ---------- Calculations ----------
-      const serviceTotal = (service.pax || 0) * (service.price || 0);
-      subtotal += serviceTotal;
+      const serviceBase = (service.pax || 0) * (service.price || 0);
 
-      const serviceGst = (!service.excludeGst && quoteData.gstIncluded && quoteData.gstPercentage > 0)
-        ? (serviceTotal * quoteData.gstPercentage) / 100
-        : 0;
+const serviceGst = service.excludeGst
+  ? 0
+  : (serviceBase * service.gstPercentage) / 100;
+
+const serviceRowTotal = serviceBase + serviceGst;
+
+subtotal += serviceBase;
+totalGst += serviceGst;
+
 
       // ---------- Rendering ----------
       // NO (left column — keep left aligned)
@@ -398,7 +409,7 @@ export const generateQuotationPDF = async (
       pdf.text(service.pax.toLocaleString('en-IN'), paxCenter, numericY, { align: 'center' });
       pdf.text(formatCurrency(service.price), priceCenter, numericY, { align: 'center' });
       pdf.text(formatCurrency(serviceGst), gstCenter, numericY, { align: 'center' });
-      pdf.text(formatCurrency(serviceTotal), amountCenter, numericY, { align: 'center' });
+      pdf.text(formatCurrency(serviceRowTotal), amountCenter, numericY, { align: 'center' });
 
       // advance y by the computed row height
       y += requiredRowHeight;
@@ -509,44 +520,39 @@ export const generateQuotationPDF = async (
     pdf.setLineWidth(0.4);
     pdf.line(totalsLabelX, y - 6, totalsValueX, y - 6);
 
-    // Subtotal
-    pdf.text('Subtotal:', totalsLabelX, y);
-    pdf.text(formatCurrency(subtotal), totalsValueX, y, { align: 'right' });
 
-    // GST - only on services that don't exclude GST
-    let gstAmount = 0;
-    if (quoteData.gstIncluded && quoteData.gstPercentage > 0) {
-      const gstEligibleSubtotal = quoteData.services
-        .filter(service => !service.excludeGst)
-        .reduce((sum, service) => sum + (service.pax * service.price), 0);
-      gstAmount = (gstEligibleSubtotal * quoteData.gstPercentage) / 100;
-      y += 7;
-      pdf.text(`GST (${quoteData.gstPercentage}%):`, totalsLabelX, y);
-      pdf.text(formatCurrency(gstAmount), totalsValueX, y, { align: 'right' });
-    }
+// Subtotal
+pdf.text('Subtotal:', totalsLabelX, y);
+pdf.text(formatCurrency(subtotal), totalsValueX, y, { align: 'right' });
 
-    // Discount
-    const discountAmount = quoteData.discountAmount ?? 0;
-    y += 7;
-    pdf.text('Discount:', totalsLabelX, y);
-    pdf.text(
-      discountAmount > 0 ? formatCurrency(discountAmount) : '-',
-      totalsValueX,
-      y,
-      { align: 'right' }
-    );
+// Total GST (per-service aggregated)
+y += 7;
+pdf.text('Total GST:', totalsLabelX, y);
+pdf.text(formatCurrency(totalGst), totalsValueX, y, { align: 'right' });
 
-    // line before final total
-    y += 5;
-    pdf.line(totalsLabelX, y, totalsValueX, y);
-    y += 8;
+// Discount
+const discountAmount = quoteData.discountAmount ?? 0;
+y += 7;
+pdf.text('Discount:', totalsLabelX, y);
+pdf.text(
+  discountAmount > 0 ? formatCurrency(discountAmount) : '-',
+  totalsValueX,
+  y,
+  { align: 'right' }
+);
 
-    // Total
-    const total = subtotal + gstAmount - discountAmount;
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.text('Total Amount:', totalsLabelX, y);
-    pdf.text(formatCurrency(total), totalsValueX, y, { align: 'right' });
+// Line before final total
+y += 5;
+pdf.line(totalsLabelX, y, totalsValueX, y);
+y += 8;
+
+// Final Total
+const total = subtotal + totalGst - discountAmount;
+pdf.setFont('helvetica', 'bold');
+pdf.setFontSize(12);
+pdf.text('Total Amount:', totalsLabelX, y);
+pdf.text(formatCurrency(total), totalsValueX, y, { align: 'right' });
+
 
     // ---------- OVERFLOW NOTES & NON-INCLUSIVE ITEMS (on new page) ----------
     const hasOverflow = notesOverflowLines.length > 0 || nonInclusiveOverflowLines.length > 0;
