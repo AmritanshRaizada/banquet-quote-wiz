@@ -23,8 +23,10 @@ interface Service {
   remarks: string;
   pax: number;
   price: number;
+  gstPercentage: number;   // 👈 per-service GST
   excludeGst: boolean;
 }
+
 
 interface QuoteData {
   clientName: string;
@@ -35,8 +37,6 @@ interface QuoteData {
   services: Service[];
   notes: string;
   nonInclusiveItems: string;
-  gstIncluded: boolean;
-  gstPercentage: number;
   discountAmount?: number;
   brandType: BrandType;
 }
@@ -55,18 +55,18 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
     startDate: "",
     endDate: "",
     services: [
-      {
-        description: "Banquet per plate",
-        remarks: "",
-        pax: 100,
-        price: banquet.basePrice,
-        excludeGst: false
-      }
-    ],
+  {
+    description: "Banquet per plate",
+    remarks: "",
+    pax: 100,
+    price: banquet.basePrice,
+    gstPercentage: 18, // default GST
+    excludeGst: false
+  }
+],
+
     notes: "",
     nonInclusiveItems: "",
-    gstIncluded: false,
-    gstPercentage: 0,
     discountAmount: 0,
     brandType: 'shaadi'
   });
@@ -88,7 +88,14 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
       ...formData,
       services: [
         ...formData.services,
-        { description: "", remarks: "", pax: 1, price: 0, excludeGst: false }
+        {
+  description: "",
+  remarks: "",
+  pax: 1,
+  price: 0,
+  gstPercentage: 18,
+  excludeGst: false
+}
       ]
     });
   };
@@ -109,13 +116,21 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
     setFormData({ ...formData, services: updatedServices });
   };
 
-  const subtotal = formData.services.reduce((sum, service) => sum + (service.pax * service.price), 0);
-  const gstEligibleSubtotal = formData.services
-    .filter(service => !service.excludeGst)
-    .reduce((sum, service) => sum + (service.pax * service.price), 0);
-  const gstAmount = formData.gstIncluded ? (gstEligibleSubtotal * formData.gstPercentage) / 100 : 0;
-  const discountAmount = formData.discountAmount || 0;
-  const total = subtotal + gstAmount - discountAmount;
+ const serviceTotals = formData.services.map((service) => {
+  const baseAmount = service.pax * service.price;
+  const gstAmount = service.excludeGst
+    ? 0
+    : (baseAmount * service.gstPercentage) / 100;
+
+  return { baseAmount, gstAmount };
+});
+
+const subtotal = serviceTotals.reduce((sum, s) => sum + s.baseAmount, 0);
+const totalGst = serviceTotals.reduce((sum, s) => sum + s.gstAmount, 0);
+const discountAmount = formData.discountAmount || 0;
+
+const total = subtotal + totalGst - discountAmount;
+
 
   return (
     <Card className="p-8 bg-card border border-border shadow-elegant animate-slide-up">
@@ -245,7 +260,7 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
 
           {formData.services.map((service, index) => (
             <Card key={index} className="p-4 bg-accent/30">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
               <div className="md:col-span-2 space-y-2">
                   <Label>Description of Service *</Label>
                   <Input
@@ -298,7 +313,22 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
                       </Button>
                     )}
                   </div>
+                  
+
                 </div>
+                <div className="space-y-2">
+  <Label>GST %</Label>
+  <Input
+    type="number"
+    value={service.gstPercentage}
+    onChange={(e) =>
+      updateService(index, "gstPercentage", parseFloat(e.target.value) || 0)
+    }
+    min="0"
+    max="100"
+    className="border-border focus:ring-primary"
+  />
+</div>
               </div>
               
               <div className="mt-3 flex items-center justify-between">
@@ -314,36 +344,16 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
                 </div>
                 <span className="text-sm text-muted-foreground">
                   Subtotal: ₹{(service.pax * service.price).toLocaleString()}
+{!service.excludeGst && ` + GST`}
                 </span>
               </div>
             </Card>
           ))}
         </div>
 
-        <div className="flex items-center space-x-2 mb-4">
-          <Checkbox
-            id="gstIncluded"
-            checked={formData.gstIncluded}
-            onCheckedChange={(checked) => setFormData({ ...formData, gstIncluded: !!checked })}
-          />
-          <Label htmlFor="gstIncluded" className="text-foreground">GST% INCLUDED</Label>
-        </div>
+        
 
-        {formData.gstIncluded && (
-          <div className="space-y-2 mb-4">
-            <Label htmlFor="gstPercentage" className="text-foreground">GST Percentage</Label>
-            <Input
-              id="gstPercentage"
-              type="number"
-              value={formData.gstPercentage}
-              onChange={(e) => setFormData({ ...formData, gstPercentage: parseFloat(e.target.value) || 0 })}
-              min="0"
-              max="100"
-              placeholder="Enter GST percentage"
-              className="border-border focus:ring-primary"
-            />
-          </div>
-        )}
+        
 
         <div className="space-y-2 mb-4">
           <Label htmlFor="discountAmount" className="flex items-center text-foreground">
@@ -389,18 +399,26 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
             <span className="font-bold text-primary text-2xl">₹{total.toLocaleString()}</span>
           </div>
           <div className="text-sm text-muted-foreground mt-2 space-y-1">
-            {formData.services.map((service, index) => (
-              <div key={index} className="flex justify-between">
-                <span>{service.description || `Service ${index + 1}`}:</span>
-                <span>{service.pax} × ₹{service.price} = ₹{(service.pax * service.price).toLocaleString()}</span>
-              </div>
-            ))}
-            {formData.gstIncluded && (
-              <div className="flex justify-between font-medium text-foreground">
-                <span>GST ({formData.gstPercentage}%):</span>
-                <span>₹{gstAmount.toLocaleString()}</span>
-              </div>
-            )}
+           {formData.services.map((service, index) => {
+  const base = service.pax * service.price;
+  const gst = service.excludeGst ? 0 : (base * service.gstPercentage) / 100;
+
+  return (
+    <div key={index} className="flex justify-between">
+      <span>{service.description || `Service ${index + 1}`}:</span>
+      <span>
+        ₹{base.toLocaleString()}
+        {!service.excludeGst && ` + GST ₹${gst.toLocaleString()}`}
+      </span>
+    </div>
+  );
+})}
+<div className="flex justify-between font-medium text-foreground">
+  <span>Total GST:</span>
+  <span>₹{totalGst.toLocaleString()}</span>
+</div>
+
+            
             {discountAmount > 0 && (
               <div className="flex justify-between font-medium text-foreground">
                 <span>Discount:</span>
