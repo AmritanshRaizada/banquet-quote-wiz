@@ -133,6 +133,8 @@ const total = subtotal + totalGst - discountAmount;
 
 
   return (
+    <div className="w-full flex justify-center px-4 py-8">
+    <div className="w-full max-w-5xl">
     <Card className="p-8 bg-card border border-border shadow-elegant animate-slide-up">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-2">Create Quotation</h2>
@@ -348,6 +350,7 @@ const total = subtotal + totalGst - discountAmount;
                 </span>
               </div>
             </Card>
+            
           ))}
         </div>
 
@@ -436,5 +439,7 @@ const total = subtotal + totalGst - discountAmount;
         </Button>
       </form>
     </Card>
+    </div>
+    </div>
   );
 };
