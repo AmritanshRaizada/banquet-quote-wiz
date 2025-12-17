@@ -289,6 +289,8 @@ export const generateQuotationPDF = async (
     y += 6;
     pdf.text(`Venue: ${quoteData.venueName}`, 20, y);
 
+    y += 6;
+pdf.text(`Location: ${quoteData.location}`, 20, y);
     // ---------- BIFURCATION HEADING ----------
     y += 15;
     pdf.setFont('helvetica', 'bold');
