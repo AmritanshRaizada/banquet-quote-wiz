@@ -278,7 +278,7 @@ export const ImageSelector = ({ banquetName, city, onImagesSelected, isGeneratin
       <div className="flex gap-4">
         <Button 
           onClick={() => onImagesSelected(selectedImages)}
-          disabled={selectedImages.length === 0 || isGeneratingPDF}
+          disabled={isGeneratingPDF}
           className="flex-1 h-14 text-lg bg-gradient-primary hover:shadow-glow transition-all duration-300 disabled:opacity-50"
         >
           {isGeneratingPDF ? (
