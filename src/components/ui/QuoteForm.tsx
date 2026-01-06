@@ -66,7 +66,22 @@ export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
 ],
 
     notes: "",
-    nonInclusiveItems: "",
+    nonInclusiveItems: `Dj and Decor Extra.
+Liquor will be on actually.
+Extra - PPL, IPRS, Novex and Liquor License , RMPL,
+ISRA licenses & Special Venue charges Will be Extra as
+per Government Policy.
+VENUE TIME RESTRICTIONS- Should you have a
+function at any outdoor venue music played
+will have to be discontinued at 2230 hrs strictly.
+SFX will Be Extra if Required.
+Hi-Tea Chaat and Fruits Counter is Extra.
+Any Kind of Artist or Entry Artist Will be Extra if required.
+Makeup Artist and Photographer - Food, Stay and Travel
+Expenses provided by Client.
+Management fee will be applicable over and above the
+package. The same will be discussed and finalized during
+the meeting.`,
     discountAmount: 0,
     brandType: 'shaadi'
   });
