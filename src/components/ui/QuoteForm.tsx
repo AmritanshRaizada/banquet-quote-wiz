@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Calendar, User, Plus, Trash2, IndianRupee } from "lucide-react";
+import { Calendar, User, Plus, Trash2, IndianRupee, Save } from "lucide-react";
 
 export type BrandType = 'shaadi' | 'nosh';
 
@@ -44,10 +44,13 @@ interface QuoteData {
 interface QuoteFormProps {
   banquet: Banquet;
   onNext: (data: QuoteData) => void;
+  onSave?: (data: QuoteData) => void;
+  isSaving?: boolean;
+  isEditing?: boolean;
   initialData?: QuoteData;
 }
 
-export const QuoteForm = ({ banquet, onNext, initialData }: QuoteFormProps) => {
+export const QuoteForm = ({ banquet, onNext, onSave, isSaving, isEditing, initialData }: QuoteFormProps) => {
   const [formData, setFormData] = useState<QuoteData>(initialData || {
     clientName: "",
     venueName: "",
@@ -446,12 +449,26 @@ const total = subtotal + totalGst - discountAmount;
           </div>
         </div>
 
-        <Button 
-          type="submit" 
-          className="w-full h-14 text-lg bg-gradient-primary hover:shadow-glow transition-all duration-300"
-        >
-          Continue to Image Selection
-        </Button>
+        <div className="flex gap-4">
+          {onSave && (
+            <Button 
+              type="button"
+              onClick={() => onSave(formData)}
+              disabled={isSaving || !formData.clientName || !formData.venueName || !formData.location || !formData.startDate || !formData.endDate}
+              variant="outline"
+              className="flex-1 h-14 text-lg border-primary text-primary hover:bg-primary/10"
+            >
+              <Save className="h-5 w-5 mr-2" />
+              {isSaving ? 'Saving...' : (isEditing ? 'Update Quotation' : 'Save to DB')}
+            </Button>
+          )}
+          <Button 
+            type="submit" 
+            className="flex-1 h-14 text-lg bg-gradient-primary hover:shadow-glow transition-all duration-300"
+          >
+            Continue to Image Selection
+          </Button>
+        </div>
       </form>
     </Card>
     </div>
