@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format, addDays, eachDayOfInterval, isWithinInterval, isSameDay } from "date-fns";
-import { LogOut, Calendar as CalendarIcon, Users, FileText, Edit, Trash2 } from "lucide-react";
+import { LogOut, Calendar as CalendarIcon, Users, FileText, Edit, Trash2, Home } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -391,10 +391,16 @@ const AdminDashboard = () => {
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <Button onClick={handleSignOut} variant="outline" size="sm">
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate("/")} variant="outline" size="sm">
+              <Home className="w-4 h-4 mr-2" />
+              Home
+            </Button>
+            <Button onClick={handleSignOut} variant="outline" size="sm">
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 
