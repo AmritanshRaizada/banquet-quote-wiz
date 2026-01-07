@@ -729,13 +729,26 @@ const AdminDashboard = () => {
                             <p>Updated: {format(new Date(quotation.updated_at), "PPp")}</p>
                           </div>
                         </div>
-                        <Button
-                          onClick={() => handleDeleteQuotation(quotation.id)}
-                          variant="destructive"
-                          size="sm"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              // Navigate to Index with quotation data for editing
+                              navigate(`/?edit=${quotation.id}`);
+                            }}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteQuotation(quotation.id)}
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
