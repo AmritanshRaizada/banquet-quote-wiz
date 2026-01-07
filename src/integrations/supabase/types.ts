@@ -53,6 +53,72 @@ export type Database = {
         }
         Relationships: []
       }
+      quotations: {
+        Row: {
+          banquet_city: string
+          banquet_id: string
+          banquet_name: string
+          brand_type: string
+          client_name: string
+          created_at: string
+          discount_amount: number | null
+          end_date: string
+          id: string
+          location: string
+          non_inclusive_items: string | null
+          notes: string | null
+          services: Json
+          start_date: string
+          subtotal: number | null
+          total: number | null
+          total_gst: number | null
+          updated_at: string
+          venue_name: string
+        }
+        Insert: {
+          banquet_city: string
+          banquet_id: string
+          banquet_name: string
+          brand_type?: string
+          client_name: string
+          created_at?: string
+          discount_amount?: number | null
+          end_date: string
+          id?: string
+          location: string
+          non_inclusive_items?: string | null
+          notes?: string | null
+          services?: Json
+          start_date: string
+          subtotal?: number | null
+          total?: number | null
+          total_gst?: number | null
+          updated_at?: string
+          venue_name: string
+        }
+        Update: {
+          banquet_city?: string
+          banquet_id?: string
+          banquet_name?: string
+          brand_type?: string
+          client_name?: string
+          created_at?: string
+          discount_amount?: number | null
+          end_date?: string
+          id?: string
+          location?: string
+          non_inclusive_items?: string | null
+          notes?: string | null
+          services?: Json
+          start_date?: string
+          subtotal?: number | null
+          total?: number | null
+          total_gst?: number | null
+          updated_at?: string
+          venue_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

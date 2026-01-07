@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BanquetCard } from "@/components/ui/BanquetCard";
 import { QuoteForm } from "@/components/ui/QuoteForm";
 import { ImageSelector } from "@/components/ui/ImageSelector";
-import { generateQuotationPDF, generateGalleryPDF } from "@/utils/pdfGenerator";
-import { Search, ArrowLeft, Shield } from "lucide-react";
+import { generateQuotationPDF, generateGalleryPDF, QuoteData as PdfQuoteData, BrandType } from "@/utils/pdfGenerator";
+import { Search, ArrowLeft, Shield, Save, FileText, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Banquet {
   id: string;
@@ -22,10 +30,9 @@ interface Service {
   remarks: string;
   pax: number;
   price: number;
+  gstPercentage: number;
   excludeGst: boolean;
 }
-
-type BrandType = 'shaadi' | 'nosh';
 
 interface QuoteData {
   clientName: string;
@@ -36,10 +43,30 @@ interface QuoteData {
   services: Service[];
   notes: string;
   nonInclusiveItems: string;
-  gstIncluded: boolean;
-  gstPercentage: number;
   discountAmount?: number;
   brandType: BrandType;
+}
+
+interface SavedQuotation {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  banquet_id: string;
+  banquet_name: string;
+  banquet_city: string;
+  client_name: string;
+  venue_name: string;
+  location: string;
+  start_date: string;
+  end_date: string;
+  services: Service[];
+  notes: string | null;
+  non_inclusive_items: string | null;
+  discount_amount: number | null;
+  brand_type: string;
+  subtotal: number | null;
+  total_gst: number | null;
+  total: number | null;
 }
 
 const BANQUETS: Banquet[] = [
@@ -921,7 +948,167 @@ const Index = () => {
   const [currentStep, setCurrentStep] = useState<Step>('search');
   const [selectedImagesForGallery, setSelectedImagesForGallery] = useState<string[]>([]);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [savedQuotations, setSavedQuotations] = useState<SavedQuotation[]>([]);
+  const [showSavedQuotations, setShowSavedQuotations] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingQuotation, setEditingQuotation] = useState<SavedQuotation | null>(null);
   const { toast } = useToast();
+
+  // Fetch saved quotations
+  const fetchSavedQuotations = async () => {
+    const { data, error } = await supabase
+      .from('quotations')
+      .select('*')
+      .order('updated_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching quotations:', error);
+      return;
+    }
+    
+    // Parse services from JSONB
+    const parsed = (data || []).map(q => ({
+      ...q,
+      services: Array.isArray(q.services) ? q.services as unknown as Service[] : []
+    }));
+    setSavedQuotations(parsed);
+  };
+
+  useEffect(() => {
+    fetchSavedQuotations();
+  }, []);
+
+  const calculateTotals = (services: Service[], discountAmount: number = 0) => {
+    let subtotal = 0;
+    let totalGst = 0;
+    
+    services.forEach(service => {
+      const base = service.pax * service.price;
+      const gst = service.excludeGst ? 0 : (base * service.gstPercentage) / 100;
+      subtotal += base;
+      totalGst += gst;
+    });
+    
+    return {
+      subtotal,
+      totalGst,
+      total: subtotal + totalGst - discountAmount
+    };
+  };
+
+  const handleSaveQuotation = async (quotationId?: string) => {
+    if (!selectedBanquet || !quoteData) return;
+    
+    setIsSaving(true);
+    
+    const totals = calculateTotals(quoteData.services, quoteData.discountAmount || 0);
+    
+    const quotationData = {
+      banquet_id: selectedBanquet.id,
+      banquet_name: selectedBanquet.name,
+      banquet_city: selectedBanquet.city,
+      client_name: quoteData.clientName,
+      venue_name: quoteData.venueName,
+      location: quoteData.location,
+      start_date: quoteData.startDate,
+      end_date: quoteData.endDate,
+      services: JSON.parse(JSON.stringify(quoteData.services)),
+      notes: quoteData.notes || null,
+      non_inclusive_items: quoteData.nonInclusiveItems || null,
+      discount_amount: quoteData.discountAmount || 0,
+      brand_type: quoteData.brandType,
+      subtotal: totals.subtotal,
+      total_gst: totals.totalGst,
+      total: totals.total
+    };
+    
+    let error;
+    
+    if (quotationId) {
+      // Update existing
+      const result = await supabase
+        .from('quotations')
+        .update(quotationData as any)
+        .eq('id', quotationId);
+      error = result.error;
+    } else {
+      // Insert new
+      const result = await supabase
+        .from('quotations')
+        .insert(quotationData as any);
+      error = result.error;
+    }
+    
+    setIsSaving(false);
+    
+    if (error) {
+      toast({
+        title: "Error saving quotation",
+        description: error.message,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: quotationId ? "Quotation Updated!" : "Quotation Saved!",
+      description: "Your quotation has been saved to the database.",
+    });
+    
+    fetchSavedQuotations();
+    setEditingQuotation(null);
+  };
+
+  const handleDeleteQuotation = async (id: string) => {
+    const { error } = await supabase
+      .from('quotations')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      toast({
+        title: "Error deleting quotation",
+        description: error.message,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Quotation Deleted",
+      description: "The quotation has been removed.",
+    });
+    
+    fetchSavedQuotations();
+  };
+
+  const handleEditQuotation = (quotation: SavedQuotation) => {
+    // Find the banquet
+    const banquet = BANQUETS.find(b => b.id === quotation.banquet_id) || {
+      id: quotation.banquet_id,
+      name: quotation.banquet_name,
+      city: quotation.banquet_city,
+      capacity: 500,
+      basePrice: 1000
+    };
+    
+    setSelectedBanquet(banquet);
+    setQuoteData({
+      clientName: quotation.client_name,
+      venueName: quotation.venue_name,
+      location: quotation.location,
+      startDate: quotation.start_date,
+      endDate: quotation.end_date,
+      services: quotation.services,
+      notes: quotation.notes || '',
+      nonInclusiveItems: quotation.non_inclusive_items || '',
+      discountAmount: quotation.discount_amount || 0,
+      brandType: quotation.brand_type as BrandType
+    });
+    setEditingQuotation(quotation);
+    setCurrentStep('form');
+    setShowSavedQuotations(false);
+  };
 
   const filteredBanquets = BANQUETS.filter(banquet =>
     banquet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -930,6 +1117,7 @@ const Index = () => {
 
   const handleBanquetSelect = (banquet: Banquet) => {
     setSelectedBanquet(banquet);
+    setEditingQuotation(null);
     setCurrentStep('form');
   };
 
@@ -1004,6 +1192,12 @@ const Index = () => {
     setCurrentStep('search');
     setSelectedBanquet(null);
     setQuoteData(null);
+    setEditingQuotation(null);
+  };
+
+  const handleSaveFromForm = (data: QuoteData) => {
+    setQuoteData(data);
+    handleSaveQuotation(editingQuotation?.id);
   };
 
   return (
@@ -1017,6 +1211,14 @@ const Index = () => {
               <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#601220' }}>Banquet Quotation Maker</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <Button 
+                variant="secondary"
+                onClick={() => setShowSavedQuotations(true)}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Saved Quotations ({savedQuotations.length})
+              </Button>
               <Link to="/admin/login">
                 <Button 
                   variant="secondary"
@@ -1096,6 +1298,10 @@ const Index = () => {
             <QuoteForm
               banquet={selectedBanquet}
               onNext={handleFormSubmit}
+              onSave={handleSaveFromForm}
+              isSaving={isSaving}
+              isEditing={!!editingQuotation}
+              initialData={quoteData || undefined}
             />
           </div>
         )}
@@ -1112,6 +1318,61 @@ const Index = () => {
           </div>
         )}
       </main>
+
+      {/* Saved Quotations Dialog */}
+      <Dialog open={showSavedQuotations} onOpenChange={setShowSavedQuotations}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Saved Quotations</DialogTitle>
+          </DialogHeader>
+          
+          {savedQuotations.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No saved quotations yet.</p>
+              <p className="text-sm">Create a quotation and click "Save to DB" to save it here.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {savedQuotations.map((quotation) => (
+                <Card key={quotation.id} className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{quotation.client_name}</h3>
+                      <p className="text-muted-foreground text-sm">{quotation.venue_name}</p>
+                      <p className="text-muted-foreground text-sm">{quotation.banquet_name}</p>
+                      <div className="flex gap-4 mt-2 text-sm">
+                        <span>📅 {new Date(quotation.start_date).toLocaleDateString('en-IN')} - {new Date(quotation.end_date).toLocaleDateString('en-IN')}</span>
+                        <span className="font-medium text-primary">₹{(quotation.total || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Last updated: {new Date(quotation.updated_at).toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditQuotation(quotation)}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteQuotation(quotation.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <footer className="bg-muted text-muted-foreground py-8 mt-20">
