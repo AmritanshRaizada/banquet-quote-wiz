@@ -244,8 +244,16 @@ const QuoteFlow = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle p-4">
-      {/* Admin Access Button */}
-      <div className="fixed top-4 right-4 z-50">
+      {/* Top Right Buttons */}
+      <div className="fixed top-4 right-4 z-50 flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.location.href = '/admin/dashboard?tab=quotations'}
+          className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+        >
+          Quotations
+        </Button>
         <Button
           variant="outline"
           size="sm"
