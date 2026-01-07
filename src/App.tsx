@@ -218,6 +218,30 @@ const QuoteFlow = () => {
     setCurrentStep('form');
   };
 
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleUpdateQuotation = async (data: QuoteData) => {
+    if (!editingQuotationId) return;
+    
+    try {
+      setIsSaving(true);
+      setQuoteData(data);
+      await saveQuotationToDb(data);
+      toast({
+        title: "Quotation Updated!",
+        description: "Your changes have been saved.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error updating quotation",
+        description: "Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle p-4">
       {/* Admin Access Button */}
@@ -236,6 +260,9 @@ const QuoteFlow = () => {
         <QuoteForm 
           banquet={defaultBanquet}
           onNext={handleQuoteNext}
+          onSave={editingQuotationId ? handleUpdateQuotation : undefined}
+          isSaving={isSaving}
+          isEditing={!!editingQuotationId}
           initialData={quoteData || undefined}
         />
       ) : (
