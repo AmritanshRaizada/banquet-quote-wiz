@@ -69,6 +69,8 @@ const QuoteFlow = () => {
   }, [searchParams]);
 
   const loadQuotationForEdit = async (id: string) => {
+    console.log('Loading quotation for edit:', id);
+    
     const { data, error } = await supabase
       .from('quotations')
       .select('*')
@@ -76,6 +78,7 @@ const QuoteFlow = () => {
       .single();
     
     if (error || !data) {
+      console.error('Error loading quotation:', error);
       toast({
         title: "Error loading quotation",
         description: "Could not find the quotation to edit.",
@@ -85,22 +88,40 @@ const QuoteFlow = () => {
       return;
     }
     
-    // Set the quote data for editing
-    setQuoteData({
-      clientName: data.client_name,
-      venueName: data.venue_name,
-      location: data.location,
-      startDate: data.start_date,
-      endDate: data.end_date,
-      services: Array.isArray(data.services) ? data.services as unknown as Service[] : [],
+    console.log('Loaded quotation data:', data);
+    
+    // Parse services - ensure it's an array with correct structure
+    const services = Array.isArray(data.services) 
+      ? (data.services as unknown as Service[]).map(s => ({
+          description: s.description || '',
+          remarks: s.remarks || '',
+          pax: Number(s.pax) || 0,
+          price: Number(s.price) || 0,
+          gstPercentage: Number(s.gstPercentage) || 18,
+          excludeGst: Boolean(s.excludeGst)
+        }))
+      : [];
+    
+    const quoteDataToSet = {
+      clientName: data.client_name || '',
+      venueName: data.venue_name || '',
+      location: data.location || '',
+      startDate: data.start_date || '',
+      endDate: data.end_date || '',
+      services,
       notes: data.notes || '',
       nonInclusiveItems: data.non_inclusive_items || '',
-      discountAmount: data.discount_amount || 0,
-      brandType: data.brand_type as any
-    });
-    setEditingQuotationId(id);
-    setCurrentStep('form');
+      discountAmount: Number(data.discount_amount) || 0,
+      brandType: (data.brand_type as 'shaadi' | 'nosh') || 'shaadi'
+    };
+    
+    console.log('Setting quote data:', quoteDataToSet);
+    
+    // Clear search params first, then set data
     setSearchParams({});
+    setEditingQuotationId(id);
+    setQuoteData(quoteDataToSet);
+    setCurrentStep('form');
   };
 
   const saveQuotationToDb = async (data: QuoteData) => {
