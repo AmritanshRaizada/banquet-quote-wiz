@@ -996,27 +996,27 @@ const Index = () => {
     };
   };
 
-  const handleSaveQuotation = async (quotationId?: string) => {
-    if (!selectedBanquet || !quoteData) return;
+  const handleSaveQuotation = async (data: QuoteData, quotationId?: string) => {
+    if (!selectedBanquet) return;
     
     setIsSaving(true);
     
-    const totals = calculateTotals(quoteData.services, quoteData.discountAmount || 0);
+    const totals = calculateTotals(data.services, data.discountAmount || 0);
     
     const quotationData = {
       banquet_id: selectedBanquet.id,
       banquet_name: selectedBanquet.name,
       banquet_city: selectedBanquet.city,
-      client_name: quoteData.clientName,
-      venue_name: quoteData.venueName,
-      location: quoteData.location,
-      start_date: quoteData.startDate,
-      end_date: quoteData.endDate,
-      services: JSON.parse(JSON.stringify(quoteData.services)),
-      notes: quoteData.notes || null,
-      non_inclusive_items: quoteData.nonInclusiveItems || null,
-      discount_amount: quoteData.discountAmount || 0,
-      brand_type: quoteData.brandType,
+      client_name: data.clientName,
+      venue_name: data.venueName,
+      location: data.location,
+      start_date: data.startDate,
+      end_date: data.endDate,
+      services: JSON.parse(JSON.stringify(data.services)),
+      notes: data.notes || null,
+      non_inclusive_items: data.nonInclusiveItems || null,
+      discount_amount: data.discountAmount || 0,
+      brand_type: data.brandType,
       subtotal: totals.subtotal,
       total_gst: totals.totalGst,
       total: totals.total
@@ -1197,7 +1197,7 @@ const Index = () => {
 
   const handleSaveFromForm = (data: QuoteData) => {
     setQuoteData(data);
-    handleSaveQuotation(editingQuotation?.id);
+    handleSaveQuotation(data, editingQuotation?.id);
   };
 
   return (
