@@ -1307,13 +1307,15 @@ const Index = () => {
         )}
 
         {/* Images Step */}
-        {currentStep === 'images' && selectedBanquet && (
+        {currentStep === 'images' && selectedBanquet && quoteData && (
           <div className="max-w-4xl mx-auto">
             <ImageSelector
               banquetName={selectedBanquet.name}
               city={selectedBanquet.city}
               onImagesSelected={handleImagesSelectedForQuote}
               isGeneratingPDF={isGeneratingPDF}
+              onSave={() => handleSaveQuotation(quoteData, editingQuotation?.id)}
+              isSaving={isSaving}
             />
           </div>
         )}

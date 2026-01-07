@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Image as ImageIcon, Check, Upload, ArrowLeft } from "lucide-react";
+import { Search, Image as ImageIcon, Check, Upload, ArrowLeft, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUploader } from "@/components/ui/ImageUploader";
 
@@ -14,6 +14,8 @@ interface ImageSelectorProps {
   onImagesSelected: (images: string[], isGalleryOnly?: boolean) => void;
   isGeneratingPDF?: boolean;
   onBack?: () => void;
+  onSave?: () => void;
+  isSaving?: boolean;
 }
 
 // Google Custom Search API configuration
@@ -34,7 +36,7 @@ const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1555244162-803834f70033?w=400&h=300&fit=crop&auto=format"
 ];
 
-export const ImageSelector = ({ banquetName, city, onImagesSelected, isGeneratingPDF = false, onBack }: ImageSelectorProps) => {
+export const ImageSelector = ({ banquetName, city, onImagesSelected, isGeneratingPDF = false, onBack, onSave, isSaving = false }: ImageSelectorProps) => {
   const [searchQuery, setSearchQuery] = useState(`${banquetName} ${city} banquet`);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<string[]>([]);
@@ -275,7 +277,28 @@ export const ImageSelector = ({ banquetName, city, onImagesSelected, isGeneratin
         </div>
       )}
 
-      <div className="flex gap-4">
+      <div className="flex gap-4 flex-wrap">
+        {onSave && (
+          <Button 
+            onClick={onSave}
+            disabled={isSaving}
+            variant="outline"
+            className="h-14 px-6 text-lg border-primary text-primary hover:bg-primary/10 transition-all duration-300 disabled:opacity-50"
+          >
+            {isSaving ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mr-2"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-5 w-5 mr-2" />
+                Save to DB
+              </>
+            )}
+          </Button>
+        )}
+        
         <Button 
           onClick={() => onImagesSelected(selectedImages)}
           disabled={isGeneratingPDF}
