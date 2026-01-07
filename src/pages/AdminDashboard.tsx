@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format, addDays, eachDayOfInterval, isWithinInterval, isSameDay } from "date-fns";
-import { LogOut, Calendar as CalendarIcon, Users } from "lucide-react";
+import { LogOut, Calendar as CalendarIcon, Users, FileText, Edit, Trash2 } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -24,6 +24,37 @@ interface Booking {
   destination_wedding?: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface Service {
+  description: string;
+  remarks: string;
+  pax: number;
+  price: number;
+  gstPercentage: number;
+  excludeGst: boolean;
+}
+
+interface SavedQuotation {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  banquet_id: string;
+  banquet_name: string;
+  banquet_city: string;
+  client_name: string;
+  venue_name: string;
+  location: string;
+  start_date: string;
+  end_date: string;
+  services: Service[];
+  notes: string | null;
+  non_inclusive_items: string | null;
+  discount_amount: number | null;
+  brand_type: string;
+  subtotal: number | null;
+  total_gst: number | null;
+  total: number | null;
 }
 
 const AdminDashboard = () => {
@@ -40,12 +71,55 @@ const AdminDashboard = () => {
   const [fullyBookedDates, setFullyBookedDates] = useState<Date[]>([]);
   const [destinationWeddingDates, setDestinationWeddingDates] = useState<Date[]>([]);
   const [blockedDates, setBlockedDates] = useState<Date[]>([]);
+  const [savedQuotations, setSavedQuotations] = useState<SavedQuotation[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     checkAuth();
     loadBookings();
+    loadSavedQuotations();
   }, []);
+
+  const loadSavedQuotations = async () => {
+    const { data, error } = await supabase
+      .from('quotations')
+      .select('*')
+      .order('updated_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching quotations:', error);
+      return;
+    }
+    
+    const parsed = (data || []).map(q => ({
+      ...q,
+      services: Array.isArray(q.services) ? q.services as unknown as Service[] : []
+    }));
+    setSavedQuotations(parsed);
+  };
+
+  const handleDeleteQuotation = async (id: string) => {
+    const { error } = await supabase
+      .from('quotations')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      toast({
+        title: "Error deleting quotation",
+        description: error.message,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Quotation Deleted",
+      description: "The quotation has been removed.",
+    });
+    
+    loadSavedQuotations();
+  };
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -326,14 +400,18 @@ const AdminDashboard = () => {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="calendar" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="calendar">
               <CalendarIcon className="w-4 h-4 mr-2" />
               Calendar Booking
             </TabsTrigger>
             <TabsTrigger value="bookings">
               <Users className="w-4 h-4 mr-2" />
-              All Bookings ({bookings.length})
+              Bookings ({bookings.length})
+            </TabsTrigger>
+            <TabsTrigger value="quotations">
+              <FileText className="w-4 h-4 mr-2" />
+              Quotations ({savedQuotations.length})
             </TabsTrigger>
           </TabsList>
 
@@ -604,6 +682,59 @@ const AdminDashboard = () => {
                           size="sm"
                         >
                           Delete
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="quotations" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Saved Quotations</CardTitle>
+                <CardDescription>
+                  All quotations saved from the quotation maker
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {savedQuotations.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No saved quotations yet.</p>
+                    <p className="text-sm">Quotations saved from the main page will appear here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {savedQuotations.map((quotation) => (
+                      <div
+                        key={quotation.id}
+                        className="flex items-start justify-between p-4 border rounded-lg hover:shadow-md transition-shadow"
+                      >
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold text-lg">{quotation.client_name}</h3>
+                            <Badge variant="outline">{quotation.brand_type}</Badge>
+                          </div>
+                          <p className="text-muted-foreground">{quotation.venue_name}</p>
+                          <p className="text-sm text-muted-foreground">{quotation.banquet_name}, {quotation.banquet_city}</p>
+                          <div className="flex gap-4 text-sm">
+                            <span>📅 {format(new Date(quotation.start_date), "MMM d")} - {format(new Date(quotation.end_date), "MMM d, yyyy")}</span>
+                            <span className="font-medium text-primary">₹{(quotation.total || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <p>Subtotal: ₹{(quotation.subtotal || 0).toLocaleString('en-IN')} | GST: ₹{(quotation.total_gst || 0).toLocaleString('en-IN')}</p>
+                            <p>Updated: {format(new Date(quotation.updated_at), "PPp")}</p>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => handleDeleteQuotation(quotation.id)}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     ))}
