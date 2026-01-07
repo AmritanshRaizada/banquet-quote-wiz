@@ -98,14 +98,29 @@ the meeting.`,
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.clientName && formData.venueName && formData.location && formData.startDate && formData.endDate && formData.services.length > 0) {
-      const hasValidServices = formData.services.every(service => 
-        service.description.trim() && service.pax > 0 && service.price > 0
-      );
-      if (hasValidServices) {
-        onNext(formData);
-      }
+    console.log('Form submit - current data:', formData);
+    
+    if (!formData.clientName || !formData.venueName || !formData.location || !formData.startDate || !formData.endDate) {
+      console.log('Missing required fields');
+      return;
     }
+    
+    if (formData.services.length === 0) {
+      console.log('No services');
+      return;
+    }
+    
+    const hasValidServices = formData.services.every(service => 
+      service.description?.trim() && service.pax > 0 && service.price > 0
+    );
+    
+    if (!hasValidServices) {
+      console.log('Invalid services:', formData.services);
+      return;
+    }
+    
+    console.log('Calling onNext with data:', formData);
+    onNext(formData);
   };
 
   const addService = () => {
