@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { QuoteForm } from "./components/ui/QuoteForm";
 import { ImageSelector } from "./components/ui/ImageSelector";
@@ -12,15 +12,27 @@ import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import { useToast } from "./hooks/use-toast";
-import { useState } from "react"; // Keep useState for QuoteFlow
+import { useState, useEffect } from "react";
+import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
+interface Service {
+  description: string;
+  remarks: string;
+  pax: number;
+  price: number;
+  gstPercentage: number;
+  excludeGst: boolean;
+}
+
 const QuoteFlow = () => {
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState<'form' | 'images'>('form');
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [editingQuotationId, setEditingQuotationId] = useState<string | null>(null);
 
   const defaultBanquet: Banquet = {
     id: "1",
@@ -28,6 +40,115 @@ const QuoteFlow = () => {
     city: "Select your preferred location",
     capacity: 500,
     basePrice: 1000
+  };
+
+  const calculateTotals = (services: Service[], discountAmount: number = 0) => {
+    let subtotal = 0;
+    let totalGst = 0;
+    
+    services.forEach(service => {
+      const base = service.pax * service.price;
+      const gst = service.excludeGst ? 0 : (base * service.gstPercentage) / 100;
+      subtotal += base;
+      totalGst += gst;
+    });
+    
+    return {
+      subtotal,
+      totalGst,
+      total: subtotal + totalGst - discountAmount
+    };
+  };
+
+  // Load quotation for editing from URL param
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId) {
+      loadQuotationForEdit(editId);
+    }
+  }, [searchParams]);
+
+  const loadQuotationForEdit = async (id: string) => {
+    const { data, error } = await supabase
+      .from('quotations')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error || !data) {
+      toast({
+        title: "Error loading quotation",
+        description: "Could not find the quotation to edit.",
+        variant: "destructive"
+      });
+      setSearchParams({});
+      return;
+    }
+    
+    // Set the quote data for editing
+    setQuoteData({
+      clientName: data.client_name,
+      venueName: data.venue_name,
+      location: data.location,
+      startDate: data.start_date,
+      endDate: data.end_date,
+      services: Array.isArray(data.services) ? data.services as unknown as Service[] : [],
+      notes: data.notes || '',
+      nonInclusiveItems: data.non_inclusive_items || '',
+      discountAmount: data.discount_amount || 0,
+      brandType: data.brand_type as any
+    });
+    setEditingQuotationId(id);
+    setCurrentStep('form');
+    setSearchParams({});
+  };
+
+  const saveQuotationToDb = async (data: QuoteData) => {
+    const totals = calculateTotals(data.services as Service[], data.discountAmount || 0);
+    
+    const quotationData = {
+      banquet_id: defaultBanquet.id,
+      banquet_name: data.venueName || defaultBanquet.name,
+      banquet_city: data.location || defaultBanquet.city,
+      client_name: data.clientName,
+      venue_name: data.venueName,
+      location: data.location,
+      start_date: data.startDate,
+      end_date: data.endDate,
+      services: JSON.parse(JSON.stringify(data.services)),
+      notes: data.notes || null,
+      non_inclusive_items: data.nonInclusiveItems || null,
+      discount_amount: data.discountAmount || 0,
+      brand_type: data.brandType,
+      subtotal: totals.subtotal,
+      total_gst: totals.totalGst,
+      total: totals.total
+    };
+    
+    let error;
+    
+    if (editingQuotationId) {
+      // Update existing quotation
+      const result = await supabase
+        .from('quotations')
+        .update(quotationData as any)
+        .eq('id', editingQuotationId);
+      error = result.error;
+    } else {
+      // Insert new quotation
+      const result = await supabase
+        .from('quotations')
+        .insert(quotationData as any);
+      error = result.error;
+    }
+    
+    if (error) {
+      console.error('Error saving quotation:', error);
+      throw error;
+    }
+    
+    // Reset editing state after save
+    setEditingQuotationId(null);
   };
 
   const handleQuoteNext = (data: QuoteData) => {
@@ -50,13 +171,17 @@ const QuoteFlow = () => {
       } else {
         // Generate quotation PDF with quote data and images
         if (!quoteData) return;
+        
+        // Save to database automatically
+        await saveQuotationToDb(quoteData);
+        
+        // Generate PDF
         await generateQuotationPDF(defaultBanquet, quoteData, images);
         toast({
-          title: "Quotation PDF Generated Successfully!",
-          description: "Your quotation has been downloaded.",
+          title: "PDF Generated & Saved!",
+          description: "Your quotation has been saved and downloaded.",
         });
       }
-      // Stay on image selection page after PDF generation
     } catch (error) {
       toast({
         title: "Error generating PDF",

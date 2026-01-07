@@ -732,7 +732,7 @@ const AdminDashboard = () => {
                         <div className="flex gap-2">
                           <Button
                             onClick={() => {
-                              // Navigate to Index with quotation data for editing
+                              // Navigate to home with quotation data for editing
                               navigate(`/?edit=${quotation.id}`);
                             }}
                             variant="outline"
