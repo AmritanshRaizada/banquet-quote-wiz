@@ -7,7 +7,7 @@ import { ImageSelector } from "@/components/ui/ImageSelector";
 import { generateQuotationPDF, generateGalleryPDF, QuoteData as PdfQuoteData, BrandType } from "@/utils/pdfGenerator";
 import { Search, ArrowLeft, Shield, Save, FileText, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import {
@@ -953,6 +953,7 @@ const Index = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [editingQuotation, setEditingQuotation] = useState<SavedQuotation | null>(null);
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Fetch saved quotations
   const fetchSavedQuotations = async () => {
@@ -977,6 +978,19 @@ const Index = () => {
   useEffect(() => {
     fetchSavedQuotations();
   }, []);
+
+  // Handle edit query param from admin panel
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId && savedQuotations.length > 0) {
+      const quotationToEdit = savedQuotations.find(q => q.id === editId);
+      if (quotationToEdit) {
+        handleEditQuotation(quotationToEdit);
+        // Clear the query param
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, savedQuotations]);
 
   const calculateTotals = (services: Service[], discountAmount: number = 0) => {
     let subtotal = 0;
@@ -1147,15 +1161,20 @@ const Index = () => {
         setIsGeneratingPDF(false);
       }
     } else {
-      // Regular quotation PDF
-      setSelectedImagesForGallery(images); // Update state with selected images
+      // Regular quotation PDF - also save to DB automatically
+      setSelectedImagesForGallery(images);
       if (selectedBanquet && quoteData) {
         try {
           setIsGeneratingPDF(true);
+          
+          // Save to database automatically
+          await handleSaveQuotation(quoteData, editingQuotation?.id);
+          
+          // Generate PDF
           await generateQuotationPDF(selectedBanquet, quoteData, images);
           toast({
-            title: "PDF Generated Successfully!",
-            description: "Your quotation has been downloaded.",
+            title: "PDF Generated & Saved!",
+            description: "Your quotation has been saved and downloaded.",
           });
         } catch (error) {
           toast({
@@ -1314,8 +1333,6 @@ const Index = () => {
               city={selectedBanquet.city}
               onImagesSelected={handleImagesSelectedForQuote}
               isGeneratingPDF={isGeneratingPDF}
-              onSave={() => handleSaveQuotation(quoteData, editingQuotation?.id)}
-              isSaving={isSaving}
             />
           </div>
         )}
@@ -1332,7 +1349,7 @@ const Index = () => {
             <div className="text-center py-8 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No saved quotations yet.</p>
-              <p className="text-sm">Create a quotation and click "Save to DB" to save it here.</p>
+              <p className="text-sm">Quotations are automatically saved when you generate a PDF.</p>
             </div>
           ) : (
             <div className="space-y-4">
