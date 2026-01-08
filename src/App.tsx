@@ -63,10 +63,11 @@ const QuoteFlow = () => {
   // Load quotation for editing from URL param
   useEffect(() => {
     const editId = searchParams.get('edit');
-    if (editId) {
+    // Only load if we have an edit ID and it's different from current
+    if (editId && editId !== editingQuotationId) {
       loadQuotationForEdit(editId);
     }
-  }, [searchParams]);
+  }, [searchParams, editingQuotationId]);
 
   const loadQuotationForEdit = async (id: string) => {
     console.log('Loading quotation for edit:', id);
@@ -124,7 +125,8 @@ const QuoteFlow = () => {
     setCurrentStep('form');
   };
 
-  const saveQuotationToDb = async (data: QuoteData) => {
+  const saveQuotationToDb = async (data: QuoteData, quotationId?: string | null) => {
+    const idToUse = quotationId ?? editingQuotationId;
     const totals = calculateTotals(data.services as Service[], data.discountAmount || 0);
     
     const quotationData = {
@@ -148,15 +150,17 @@ const QuoteFlow = () => {
     
     let error;
     
-    if (editingQuotationId) {
+    if (idToUse) {
       // Update existing quotation
+      console.log('Updating quotation with ID:', idToUse);
       const result = await supabase
         .from('quotations')
         .update(quotationData as any)
-        .eq('id', editingQuotationId);
+        .eq('id', idToUse);
       error = result.error;
     } else {
       // Insert new quotation
+      console.log('Inserting new quotation');
       const result = await supabase
         .from('quotations')
         .insert(quotationData as any);
@@ -221,12 +225,15 @@ const QuoteFlow = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleUpdateQuotation = async (data: QuoteData) => {
-    if (!editingQuotationId) return;
+    // Capture the ID immediately before any async operations
+    const currentEditId = editingQuotationId;
+    if (!currentEditId) return;
     
     try {
       setIsSaving(true);
       setQuoteData(data);
-      await saveQuotationToDb(data);
+      // Pass the captured ID explicitly to ensure it's used
+      await saveQuotationToDb(data, currentEditId);
       toast({
         title: "Quotation Updated!",
         description: "Your changes have been saved.",
