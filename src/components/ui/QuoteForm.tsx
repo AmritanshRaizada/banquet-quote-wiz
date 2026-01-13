@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Calendar, User, Plus, Trash2, IndianRupee, Save } from "lucide-react";
+import { Calendar, User, Plus, Trash2, IndianRupee, Save, ChevronUp, ChevronDown } from "lucide-react";
 
 export type BrandType = 'shaadi' | 'nosh';
 
@@ -156,6 +156,20 @@ the meeting.`,
     setFormData({ ...formData, services: updatedServices });
   };
 
+  const moveServiceUp = (index: number) => {
+    if (index === 0) return;
+    const newServices = [...formData.services];
+    [newServices[index - 1], newServices[index]] = [newServices[index], newServices[index - 1]];
+    setFormData({ ...formData, services: newServices });
+  };
+
+  const moveServiceDown = (index: number) => {
+    if (index === formData.services.length - 1) return;
+    const newServices = [...formData.services];
+    [newServices[index], newServices[index + 1]] = [newServices[index + 1], newServices[index]];
+    setFormData({ ...formData, services: newServices });
+  };
+
  const serviceTotals = formData.services.map((service) => {
   const baseAmount = service.pax * service.price;
   const gstAmount = service.excludeGst
@@ -302,7 +316,32 @@ const total = subtotal + totalGst - discountAmount;
 
           {formData.services.map((service, index) => (
             <Card key={index} className="p-4 bg-accent/30">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+              <div className="flex items-start gap-2">
+                {/* Reorder arrows */}
+                <div className="flex flex-col gap-1 pt-6">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => moveServiceUp(index)}
+                    disabled={index === 0}
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => moveServiceDown(index)}
+                    disabled={index === formData.services.length - 1}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
               <div className="md:col-span-2 space-y-2">
                   <Label>Description of Service *</Label>
                   <Input
@@ -371,6 +410,7 @@ const total = subtotal + totalGst - discountAmount;
     className="border-border focus:ring-primary"
   />
 </div>
+                </div>
               </div>
               
               <div className="mt-3 flex items-center justify-between">
