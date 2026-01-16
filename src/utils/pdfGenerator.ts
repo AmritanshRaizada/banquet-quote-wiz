@@ -29,7 +29,7 @@ export interface QuoteData {
   services: Service[];
   notes: string;
   nonInclusiveItems: string;
-  
+
   invoiceNumber?: string;
   issueDate?: string;
   discountAmount?: number;
@@ -80,7 +80,7 @@ const wrapSmart = (text: string, maxWords = 4, maxChars = 24): string[] => {
 
     // If adding this word exceeds char OR word limit → push line & start new
     if (
-      currentLine.length >= maxWords || 
+      currentLine.length >= maxWords ||
       (currentLength + wordLength + (currentLine.length > 0 ? 1 : 0)) > maxChars
     ) {
       lines.push(currentLine.join(" "));
@@ -98,6 +98,73 @@ const wrapSmart = (text: string, maxWords = 4, maxChars = 24): string[] => {
   }
 
   return lines;
+};
+
+// Utility to sanitize text for PDF (handling symbols not supported by standard fonts)
+const sanitizeTextForPDF = (text: string): string => {
+  if (!text) return "";
+  // Replace Rupee symbol with Rs. since standard fonts don't support it
+  return text.replace(/₹/g, "Rs.");
+};
+
+// Utility to render text with bullets and proper wrapping/indentation
+const renderSectionWithBullets = (
+  pdf: jsPDF,
+  text: string,
+  x: number,
+  startY: number,
+  maxWidth: number,
+  lineHeight: number,
+  limitY: number,
+  isItalic: boolean = false
+): { lastY: number; overflowItems: string[] } => {
+  pdf.setCharSpace(0); // CRITICAL: Reset character spacing
+  if (isItalic) {
+    pdf.setFont('helvetica', 'italic');
+  } else {
+    pdf.setFont('helvetica', 'normal');
+  }
+
+  const items = text.split("\n").map(i => i.trim()).filter(i => i !== "");
+  let currentY = startY;
+  let overflowItems: string[] = [];
+
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx];
+    const sanitizedItem = sanitizeTextForPDF(item);
+    const bullet = "• ";
+    const bulletWidth = pdf.getTextWidth(bullet);
+
+    // Split the item into lines that fit the width (accounting for bullet indent)
+    const wrappedLines = pdf.splitTextToSize(sanitizedItem, maxWidth - bulletWidth);
+
+    // Check if even the first line fits
+    if (currentY + lineHeight > limitY) {
+      overflowItems = items.slice(idx);
+      return { lastY: currentY, overflowItems };
+    }
+
+    // Render the item lines
+    for (let i = 0; i < wrappedLines.length; i++) {
+      if (currentY + lineHeight > limitY) {
+        // This item partially fits, but we move the whole item or remaining items to overflow for simplicity
+        // Actually, let's just move remaining items
+        overflowItems = items.slice(idx);
+        return { lastY: currentY, overflowItems };
+      }
+
+      if (i === 0) {
+        pdf.text(bullet, x, currentY);
+        pdf.text(wrappedLines[i], x + bulletWidth, currentY);
+      } else {
+        pdf.text(wrappedLines[i], x + bulletWidth, currentY);
+      }
+      currentY += lineHeight;
+    }
+    currentY += 1.5; // Small gap between bullet items
+  }
+
+  return { lastY: currentY, overflowItems };
 };
 
 
@@ -290,7 +357,7 @@ export const generateQuotationPDF = async (
     pdf.text(`Venue: ${quoteData.venueName}`, 20, y);
 
     y += 6;
-pdf.text(`Location: ${quoteData.location}`, 20, y);
+    pdf.text(`Location: ${quoteData.location}`, 20, y);
     // ---------- BIFURCATION HEADING ----------
     y += 15;
     pdf.setFont('helvetica', 'bold');
@@ -303,23 +370,23 @@ pdf.text(`Location: ${quoteData.location}`, 20, y);
 
     // Column X positions (define once)
     const colNoX = 20;
-const colServiceX = 32;
-const colPaxX = 85;
-const colPriceX = 110;
-const colGstX = 135;     // 👈 move GST left
-const colAmountX = 165;  // 👈 move Amount left
+    const colServiceX = 32;
+    const colPaxX = 85;
+    const colPriceX = 110;
+    const colGstX = 135;     // 👈 move GST left
+    const colAmountX = 165;  // 👈 move Amount left
 
 
     // Column widths & centers (use these for headers + rows)
     const paxWidth = colPriceX - colPaxX;
-const priceWidth = colGstX - colPriceX;
-const gstWidth = colAmountX - colGstX;
-const amountWidth = pageWidth - colAmountX - 20;
+    const priceWidth = colGstX - colPriceX;
+    const gstWidth = colAmountX - colGstX;
+    const amountWidth = pageWidth - colAmountX - 20;
 
-const paxCenter = colPaxX + paxWidth / 2;
-const priceCenter = colPriceX + priceWidth / 2;
-const gstCenter = colGstX + gstWidth / 2;
-const amountCenter = colAmountX + amountWidth / 2;
+    const paxCenter = colPaxX + paxWidth / 2;
+    const priceCenter = colPriceX + priceWidth / 2;
+    const gstCenter = colGstX + gstWidth / 2;
+    const amountCenter = colAmountX + amountWidth / 2;
 
 
     // Draw headers (numeric headers centered)
@@ -335,7 +402,7 @@ const amountCenter = colAmountX + amountWidth / 2;
     pdf.setFont('helvetica', 'normal');
 
     let subtotal = 0;
-let totalGst = 0;
+    let totalGst = 0;
 
     // Use termsFooterY as the limit for table rows (T&C footer at 262mm)
     // Leave minimal margin (10mm) to maximize space usage
@@ -348,13 +415,13 @@ let totalGst = 0;
       pdf.setFontSize(bodyFontSize);
 
       // Wrap description after every 24 chars
-      const descriptionLines = wrapSmart(service.description || '', 4,30);
+      const descriptionLines = wrapSmart(service.description || '', 4, 30);
 
       // Wrap remarks similarly (hard wrap)
       pdf.setFontSize(remarkFontSize);
-      const remarksLines = service.remarks 
-  ? wrapSmart(`Remarks: ${service.remarks}`, 4, 30)
-  : [];
+      const remarksLines = service.remarks
+        ? wrapSmart(`Remarks: ${service.remarks}`, 4, 30)
+        : [];
 
       pdf.setFontSize(bodyFontSize);
 
@@ -376,14 +443,14 @@ let totalGst = 0;
       // ---------- Calculations ----------
       const serviceBase = (service.pax || 0) * (service.price || 0);
 
-const serviceGst = service.excludeGst
-  ? 0
-  : (serviceBase * service.gstPercentage) / 100;
+      const serviceGst = service.excludeGst
+        ? 0
+        : (serviceBase * service.gstPercentage) / 100;
 
-const serviceRowTotal = serviceBase + serviceGst;
+      const serviceRowTotal = serviceBase + serviceGst;
 
-subtotal += serviceBase;
-totalGst += serviceGst;
+      subtotal += serviceBase;
+      totalGst += serviceGst;
 
 
       // ---------- Rendering ----------
@@ -442,77 +509,66 @@ totalGst += serviceGst;
     const notesMaxWidth = 90; // Space left of totals
     const notesStartY = y;
     const lineHeight = 4;
-    
-    // Pre-calculate notes content
-    let notesLines: string[] = [];
-    let nonInclusiveLines: string[] = [];
-    
-    if (quoteData.notes) {
-      notesLines = pdf.splitTextToSize(quoteData.notes, notesMaxWidth);
-    }
-    
-    if (quoteData.nonInclusiveItems) {
-      nonInclusiveLines = pdf.splitTextToSize(quoteData.nonInclusiveItems, notesMaxWidth);
-    }
-    
-    // Track which lines overflow to next page
-    let notesOverflowLines: string[] = [];
-    let nonInclusiveOverflowLines: string[] = [];
+    // Track overflow items
+    let notesOverflow: string[] = [];
+    let nonInclusiveOverflow: string[] = [];
     let notesY = notesStartY;
-    
-    // Always render notes beside totals, tracking overflow
+
+    // Explicitly reset char space before notes
+    pdf.setCharSpace(0);
+
     if (quoteData.notes || quoteData.nonInclusiveItems) {
-      // Render notes on the left side of totals
-      if (quoteData.notes && notesLines.length > 0) {
+      // 1. Render Notes
+      if (quoteData.notes) {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(10);
         pdf.text('Notes:', notesLeftX, notesY);
         notesY += 5;
-        
-        pdf.setFont('helvetica', 'italic');
+
         pdf.setFontSize(9);
-        
-        // Render lines that fit, track overflow
-        for (let i = 0; i < notesLines.length; i++) {
-          if (notesY + lineHeight > termsFooterY) {
-            // Rest goes to overflow
-            notesOverflowLines = notesLines.slice(i);
-            break;
-          }
-          pdf.text(notesLines[i], notesLeftX, notesY);
-          notesY += lineHeight;
-        }
-        notesY += 5;
+        const result = renderSectionWithBullets(
+          pdf,
+          quoteData.notes,
+          notesLeftX,
+          notesY,
+          notesMaxWidth,
+          lineHeight,
+          termsFooterY,
+          true // isItalic
+        );
+        notesY = result.lastY;
+        notesOverflow = result.overflowItems;
       }
-      
-      // Only render non-inclusive if notes didn't overflow AND we have space
-      if (quoteData.nonInclusiveItems && nonInclusiveLines.length > 0 && notesOverflowLines.length === 0) {
-        if (notesY + 10 < termsFooterY) {
+
+      // 2. Render Non-Inclusive Items (if space permits)
+      if (quoteData.nonInclusiveItems && notesOverflow.length === 0) {
+        const remainingSpace = termsFooterY - notesY;
+        if (remainingSpace > 10) {
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(10);
-          pdf.text('Non-Inclusive Items:', notesLeftX, notesY);
-          notesY += 5;
-          
-          pdf.setFont('helvetica', 'normal');
+          pdf.text('Non-Inclusive Items:', notesLeftX, notesY + 2);
+          notesY += 7;
+
           pdf.setFontSize(9);
-          
-          // Render lines that fit, track overflow
-          for (let i = 0; i < nonInclusiveLines.length; i++) {
-            if (notesY + lineHeight > termsFooterY) {
-              // Rest goes to overflow
-              nonInclusiveOverflowLines = nonInclusiveLines.slice(i);
-              break;
-            }
-            pdf.text(nonInclusiveLines[i], notesLeftX, notesY);
-            notesY += lineHeight;
-          }
+          const result = renderSectionWithBullets(
+            pdf,
+            quoteData.nonInclusiveItems,
+            notesLeftX,
+            notesY,
+            notesMaxWidth,
+            lineHeight,
+            termsFooterY,
+            false // not italic
+          );
+          notesY = result.lastY;
+          nonInclusiveOverflow = result.overflowItems;
         } else {
-          // All non-inclusive goes to overflow
-          nonInclusiveOverflowLines = nonInclusiveLines;
+          // No space for header + first item
+          nonInclusiveOverflow = quoteData.nonInclusiveItems.split('\n').filter(i => i.trim() !== "");
         }
-      } else if (quoteData.nonInclusiveItems && notesOverflowLines.length > 0) {
-        // Notes overflowed, so all non-inclusive goes to new page
-        nonInclusiveOverflowLines = nonInclusiveLines;
+      } else if (quoteData.nonInclusiveItems) {
+        // Notes already overflowed
+        nonInclusiveOverflow = quoteData.nonInclusiveItems.split('\n').filter(i => i.trim() !== "");
       }
     }
 
@@ -523,67 +579,74 @@ totalGst += serviceGst;
     pdf.line(totalsLabelX, y - 6, totalsValueX, y - 6);
 
 
-// Subtotal
-pdf.text('Subtotal:', totalsLabelX, y);
-pdf.text(formatCurrency(subtotal), totalsValueX, y, { align: 'right' });
+    // Subtotal
+    pdf.text('Subtotal:', totalsLabelX, y);
+    pdf.text(formatCurrency(subtotal), totalsValueX, y, { align: 'right' });
 
-// Total GST (per-service aggregated)
-y += 7;
-pdf.text('Total GST:', totalsLabelX, y);
-pdf.text(formatCurrency(totalGst), totalsValueX, y, { align: 'right' });
+    // Total GST (per-service aggregated)
+    y += 7;
+    pdf.text('Total GST:', totalsLabelX, y);
+    pdf.text(formatCurrency(totalGst), totalsValueX, y, { align: 'right' });
 
-// Discount
-const discountAmount = quoteData.discountAmount ?? 0;
-y += 7;
-pdf.text('Discount:', totalsLabelX, y);
-pdf.text(
-  discountAmount > 0 ? formatCurrency(discountAmount) : '-',
-  totalsValueX,
-  y,
-  { align: 'right' }
-);
+    // Discount
+    const discountAmount = quoteData.discountAmount ?? 0;
+    y += 7;
+    pdf.text('Discount:', totalsLabelX, y);
+    pdf.text(
+      discountAmount > 0 ? formatCurrency(discountAmount) : '-',
+      totalsValueX,
+      y,
+      { align: 'right' }
+    );
 
-// Line before final total
-y += 5;
-pdf.line(totalsLabelX, y, totalsValueX, y);
-y += 8;
+    // Line before final total
+    y += 5;
+    pdf.line(totalsLabelX, y, totalsValueX, y);
+    y += 8;
 
-// Final Total
-const total = subtotal + totalGst - discountAmount;
-pdf.setFont('helvetica', 'bold');
-pdf.setFontSize(12);
-pdf.text('Total Amount:', totalsLabelX, y);
-pdf.text(formatCurrency(total), totalsValueX, y, { align: 'right' });
+    // Final Total
+    const total = subtotal + totalGst - discountAmount;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('Total Amount:', totalsLabelX, y);
+    pdf.text(formatCurrency(total), totalsValueX, y, { align: 'right' });
 
 
     // ---------- OVERFLOW NOTES & NON-INCLUSIVE ITEMS (on new page) ----------
-    const hasOverflow = notesOverflowLines.length > 0 || nonInclusiveOverflowLines.length > 0;
-    
+    const hasOverflow = notesOverflow.length > 0 || nonInclusiveOverflow.length > 0;
+
     if (hasOverflow) {
       pdf.addPage();
       pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
       let newPageY = 40;
       const fullNotesWidth = pageWidth - 40;
+      const overflowLineHeight = 5;
 
       // ---------- CONTINUED NOTES ----------
-      if (notesOverflowLines.length > 0) {
+      if (notesOverflow.length > 0) {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(10);
         pdf.text('Notes (continued):', 20, newPageY);
-        newPageY += 6;
+        newPageY += 7;
 
-        pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(9);
-        pdf.text(notesOverflowLines, 20, newPageY);
-        newPageY += notesOverflowLines.length * 4 + 10;
+        const result = renderSectionWithBullets(
+          pdf,
+          notesOverflow.join('\n'),
+          20,
+          newPageY,
+          fullNotesWidth,
+          overflowLineHeight,
+          termsFooterY,
+          true
+        );
+        newPageY = result.lastY + 10;
       }
 
       // ---------- NON-INCLUSIVE ITEMS ----------
-      if (nonInclusiveOverflowLines.length > 0) {
-        // Check if we need page break
-        const nonInclusiveHeight = nonInclusiveOverflowLines.length * 4 + 12;
-
-        if (newPageY + nonInclusiveHeight > termsFooterY) {
+      if (nonInclusiveOverflow.length > 0) {
+        // If we're too close to the bottom, new page
+        if (newPageY + 15 > termsFooterY) {
           pdf.addPage();
           pdf.addImage(templateDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
           newPageY = 40;
@@ -592,11 +655,19 @@ pdf.text(formatCurrency(total), totalsValueX, y, { align: 'right' });
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(10);
         pdf.text('Non-Inclusive Items:', 20, newPageY);
-        newPageY += 6;
+        newPageY += 7;
 
-        pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
-        pdf.text(nonInclusiveOverflowLines, 20, newPageY);
+        renderSectionWithBullets(
+          pdf,
+          nonInclusiveOverflow.join('\n'),
+          20,
+          newPageY,
+          fullNotesWidth,
+          overflowLineHeight,
+          termsFooterY,
+          false
+        );
       }
     }
     const fileName = `${sanitizeFileName(quoteData.venueName)}_quotation_${Date.now()}.pdf`;
