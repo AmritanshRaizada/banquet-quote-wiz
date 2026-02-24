@@ -188,7 +188,7 @@ The same will be discussed and finalized during the meeting.`,
       <div className="w-full max-w-5xl">
         <Card className="p-8 bg-card border border-border shadow-elegant animate-slide-up">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-foreground mb-2">Create Quotation</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Create Quotations</h2>
             <p className="text-muted-foreground">for {banquet.name}, {banquet.city}</p>
           </div>
 
