@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format, addDays, eachDayOfInterval, isWithinInterval, isSameDay } from "date-fns";
-import { LogOut, Calendar as CalendarIcon, Users, FileText, Edit, Trash2, Home } from "lucide-react";
+import { LogOut, Calendar as CalendarIcon, Users, FileText, Edit, Trash2, Home, Key, ShieldCheck, RefreshCcw, Timer, Loader2 } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -72,25 +72,117 @@ const AdminDashboard = () => {
   const [destinationWeddingDates, setDestinationWeddingDates] = useState<Date[]>([]);
   const [blockedDates, setBlockedDates] = useState<Date[]>([]);
   const [savedQuotations, setSavedQuotations] = useState<SavedQuotation[]>([]);
+
+  // Passkey states
+  const [passkey, setPasskey] = useState("");
+  const [passkeyTimeLeft, setPasskeyTimeLeft] = useState<number | null>(null);
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
     checkAuth();
     loadBookings();
     loadSavedQuotations();
+    fetchLatestPasskey();
   }, []);
+
+  // Passkey timer logic
+  useEffect(() => {
+    if (passkeyTimeLeft === null || passkeyTimeLeft <= 0) {
+      if (passkeyTimeLeft === 0) setPasskey(""); // Clear on expiry
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setPasskeyTimeLeft((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [passkeyTimeLeft]);
+
+  const fetchLatestPasskey = async () => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from("admin_passkeys")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data) {
+        const expiry = new Date(data.expires_at).getTime();
+        const now = new Date().getTime();
+        const diff = Math.floor((expiry - now) / 1000);
+
+        if (diff > 0) {
+          setPasskey(data.passkey);
+          setPasskeyTimeLeft(diff);
+        } else {
+          setPasskey("");
+          setPasskeyTimeLeft(0);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching passkey:", err);
+    }
+  };
+
+  const generatePasskey = async () => {
+    setIsGeneratingKey(true);
+    try {
+      // 1. Delete old keys
+      await (supabase as any).from("admin_passkeys").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+
+      // 2. Generate new key
+      const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let newKey = "";
+      for (let i = 0; i < 5; i++) {
+        newKey += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+
+      const expiresAt = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+
+      const { error } = await (supabase as any).from("admin_passkeys").insert([
+        { passkey: newKey, expires_at: expiresAt }
+      ]);
+
+      if (error) throw error;
+
+      setPasskey(newKey);
+      setPasskeyTimeLeft(120);
+      toast({
+        title: "Passkey Generated",
+        description: "New secure passkey created successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Generation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingKey(false);
+    }
+  };
+
+  const formatPasskeyTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const loadSavedQuotations = async () => {
     const { data, error } = await supabase
       .from('quotations')
       .select('*')
       .order('updated_at', { ascending: false });
-    
+
     if (error) {
       console.error('Error fetching quotations:', error);
       return;
     }
-    
+
     const parsed = (data || []).map(q => ({
       ...q,
       services: Array.isArray(q.services) ? q.services as unknown as Service[] : []
@@ -103,7 +195,7 @@ const AdminDashboard = () => {
       .from('quotations')
       .delete()
       .eq('id', id);
-    
+
     if (error) {
       toast({
         title: "Error deleting quotation",
@@ -112,19 +204,20 @@ const AdminDashboard = () => {
       });
       return;
     }
-    
+
     toast({
       title: "Quotation Deleted",
       description: "The quotation has been removed.",
     });
-    
+
     loadSavedQuotations();
   };
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = localStorage.getItem("admin_login_session");
     if (!session) {
       navigate("/admin/login");
+      return;
     }
   };
 
@@ -138,20 +231,20 @@ const AdminDashboard = () => {
       if (error) throw error;
 
       setBookings(data || []);
-      
+
       // Group bookings by date to determine booking status
       const bookingsByDate = (data || []).reduce((acc, booking) => {
         // Handle date ranges for each booking
         const startBookingDate = new Date(booking.booking_date);
         const endBookingDate = booking.end_date ? new Date(booking.end_date) : startBookingDate;
-        
+
         const bookingDates = eachDayOfInterval({ start: startBookingDate, end: endBookingDate });
-        
+
         bookingDates.forEach(date => {
           const dateString = format(date, 'yyyy-MM-dd');
           acc[dateString] = (acc[dateString] || 0) + 1;
         });
-        
+
         return acc;
       }, {} as Record<string, number>);
 
@@ -168,19 +261,19 @@ const AdminDashboard = () => {
       // Set destination wedding dates (for blue highlighting)
       const destinationDates: Date[] = [];
       const blockedDates: Date[] = [];
-      
+
       (data || []).forEach(booking => {
         const startBookingDate = new Date(booking.booking_date);
         const endBookingDate = booking.end_date ? new Date(booking.end_date) : startBookingDate;
         const bookingDates = eachDayOfInterval({ start: startBookingDate, end: endBookingDate });
-        
+
         if (booking.destination_wedding) {
           destinationDates.push(...bookingDates);
           // Destination wedding dates are also blocked for regular bookings
           blockedDates.push(...bookingDates);
         }
       });
-      
+
       setDestinationWeddingDates(destinationDates);
       setBlockedDates(blockedDates);
     } catch (error: any) {
@@ -194,8 +287,13 @@ const AdminDashboard = () => {
 
   const handleSignOut = async () => {
     try {
+      localStorage.removeItem("admin_login_session");
       await supabase.auth.signOut();
       navigate("/admin/login");
+      toast({
+        title: "Logged Out",
+        description: "Your session has been cleared.",
+      });
     } catch (error: any) {
       toast({
         title: "Error signing out",
@@ -207,7 +305,7 @@ const AdminDashboard = () => {
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
-    
+
     if (dateSelectionMode === 'start') {
       setStartDate(date);
       setEndDate(undefined);
@@ -236,7 +334,7 @@ const AdminDashboard = () => {
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!startDate || !endDate || !clientName.trim() || !hotelName.trim()) {
       toast({
         title: "Missing information",
@@ -250,26 +348,26 @@ const AdminDashboard = () => {
     const selectedDates = eachDayOfInterval({ start: startDate, end: endDate });
     const conflictingDestinationDates: string[] = [];
     const conflictingRegularDates: string[] = [];
-    
+
     selectedDates.forEach(date => {
       const dateString = format(date, "yyyy-MM-dd");
-      
+
       // Check for destination wedding conflicts
       const destinationWeddingsForDate = bookings.filter(booking => {
         if (!booking.destination_wedding) return false;
-        
+
         const bookingStart = new Date(booking.booking_date);
         const bookingEnd = booking.end_date ? new Date(booking.end_date) : bookingStart;
         const bookingDates = eachDayOfInterval({ start: bookingStart, end: bookingEnd });
         return bookingDates.some(bookingDate => format(bookingDate, "yyyy-MM-dd") === dateString);
       });
-      
+
       // If there's a destination wedding and this is not a destination wedding, block it
       if (destinationWeddingsForDate.length > 0 && !isDestinationWedding) {
         conflictingDestinationDates.push(format(date, "PPP"));
         return;
       }
-      
+
       // If this is a destination wedding and there are any other bookings, block it
       if (isDestinationWedding) {
         const anyBookingsForDate = bookings.filter(booking => {
@@ -278,13 +376,13 @@ const AdminDashboard = () => {
           const bookingDates = eachDayOfInterval({ start: bookingStart, end: bookingEnd });
           return bookingDates.some(bookingDate => format(bookingDate, "yyyy-MM-dd") === dateString);
         });
-        
+
         if (anyBookingsForDate.length > 0) {
           conflictingDestinationDates.push(format(date, "PPP"));
           return;
         }
       }
-      
+
       // Check regular booking limits (2 per day) for non-destination weddings
       if (!isDestinationWedding) {
         const existingBookingsForDate = bookings.filter(booking => {
@@ -293,7 +391,7 @@ const AdminDashboard = () => {
           const bookingDates = eachDayOfInterval({ start: bookingStart, end: bookingEnd });
           return bookingDates.some(bookingDate => format(bookingDate, "yyyy-MM-dd") === dateString);
         });
-        
+
         if (existingBookingsForDate.length >= 2) {
           conflictingRegularDates.push(format(date, "PPP"));
         }
@@ -303,7 +401,7 @@ const AdminDashboard = () => {
     if (conflictingDestinationDates.length > 0) {
       toast({
         title: "Destination Wedding Conflict",
-        description: isDestinationWedding 
+        description: isDestinationWedding
           ? `Cannot book destination wedding - these dates have existing bookings: ${conflictingDestinationDates.join(", ")}`
           : `Cannot book during destination wedding dates: ${conflictingDestinationDates.join(", ")}`,
         variant: "destructive",
@@ -348,7 +446,7 @@ const AdminDashboard = () => {
       setHotelName("");
       setDescription("");
       setIsDestinationWedding(false);
-      
+
       // Reload bookings
       loadBookings();
     } catch (error: any) {
@@ -375,7 +473,7 @@ const AdminDashboard = () => {
         title: "Booking deleted",
         description: "The booking has been removed successfully.",
       });
-      
+
       loadBookings();
     } catch (error: any) {
       toast({
@@ -406,7 +504,7 @@ const AdminDashboard = () => {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="calendar" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="calendar">
               <CalendarIcon className="w-4 h-4 mr-2" />
               Calendar Booking
@@ -418,6 +516,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="quotations">
               <FileText className="w-4 h-4 mr-2" />
               Quotations ({savedQuotations.length})
+            </TabsTrigger>
+            <TabsTrigger value="security">
+              <ShieldCheck className="w-4 h-4 mr-2" />
+              Security
             </TabsTrigger>
           </TabsList>
 
@@ -460,8 +562,8 @@ const AdminDashboard = () => {
                     onSelect={handleDateSelect}
                     className="rounded-md border"
                     modifiers={{
-                      partiallyBooked: bookedDates.filter(date => 
-                        !fullyBookedDates.some(fullDate => 
+                      partiallyBooked: bookedDates.filter(date =>
+                        !fullyBookedDates.some(fullDate =>
                           fullDate.toDateString() === date.toDateString()
                         ) && !destinationWeddingDates.some(destDate =>
                           destDate.toDateString() === date.toDateString()
@@ -475,24 +577,24 @@ const AdminDashboard = () => {
                         )
                       ),
                       destinationWedding: destinationWeddingDates,
-                      blocked: blockedDates.filter(date => 
+                      blocked: blockedDates.filter(date =>
                         !destinationWeddingDates.some(destDate =>
                           destDate.toDateString() === date.toDateString()
                         )
                       ),
                       startDate: startDate ? [startDate] : [],
                       endDate: endDate ? [endDate] : [],
-                      rangeMiddle: startDate && endDate ? 
+                      rangeMiddle: startDate && endDate ?
                         eachDayOfInterval({ start: startDate, end: endDate })
                           .filter(date => !isSameDay(date, startDate) && !isSameDay(date, endDate))
                         : [],
                     }}
                     modifiersStyles={{
-                      partiallyBooked: { 
+                      partiallyBooked: {
                         backgroundColor: "hsl(var(--warning))",
                         color: "hsl(var(--warning-foreground))",
                       },
-                      fullyBooked: { 
+                      fullyBooked: {
                         backgroundColor: "hsl(var(--destructive))",
                         color: "hsl(var(--destructive-foreground))",
                       },
@@ -525,9 +627,9 @@ const AdminDashboard = () => {
                         color: "hsl(var(--foreground))",
                       },
                     }}
-                    disabled={(date) => 
-                      blockedDates.some(blockedDate => 
-                        blockedDate.toDateString() === date.toDateString() && 
+                    disabled={(date) =>
+                      blockedDates.some(blockedDate =>
+                        blockedDate.toDateString() === date.toDateString() &&
                         !destinationWeddingDates.some(destDate =>
                           destDate.toDateString() === date.toDateString()
                         )
@@ -576,9 +678,9 @@ const AdminDashboard = () => {
                   <CardDescription>
                     {startDate && endDate
                       ? `Creating booking from ${format(startDate, "PPP")} to ${format(endDate, "PPP")}`
-                      : startDate 
-                      ? `Start date selected: ${format(startDate, "PPP")}. Select end date.`
-                      : "Select start date first, then end date to create a booking"
+                      : startDate
+                        ? `Start date selected: ${format(startDate, "PPP")}. Select end date.`
+                        : "Select start date first, then end date to create a booking"
                     }
                   </CardDescription>
                 </CardHeader>
@@ -622,9 +724,9 @@ const AdminDashboard = () => {
                       />
                       <Label htmlFor="destinationWedding">Destination Wedding</Label>
                     </div>
-                    <Button 
-                      type="submit" 
-                      className="w-full" 
+                    <Button
+                      type="submit"
+                      className="w-full"
                       disabled={!startDate || !endDate || !clientName.trim() || !hotelName.trim() || isLoading}
                     >
                       {isLoading ? "Creating Booking..." : "Create Booking"}
@@ -761,6 +863,95 @@ const AdminDashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="security" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="border-t-4 border-t-primary shadow-lg overflow-hidden">
+                <CardHeader className="bg-primary/5 pb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary p-2.5 rounded-xl shadow-inner">
+                      <Key className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Passkey Management</CardTitle>
+                      <CardDescription>Control access for public users</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-8 space-y-8">
+                  <div className="flex flex-col items-center justify-center p-8 bg-[#FFFBF0] rounded-2xl border border-primary/10 shadow-inner group transition-all duration-300 hover:border-primary/30">
+                    <p className="text-xs font-bold text-primary/60 uppercase tracking-[0.2em] mb-4">Currently Active Key</p>
+                    {passkey ? (
+                      <div className="flex flex-col items-center gap-4">
+                        <span className="text-6xl font-black text-primary tracking-[0.15em] drop-shadow-sm select-all">
+                          {passkey}
+                        </span>
+                        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-primary/5">
+                          <Timer className="w-4 h-4 text-primary animate-pulse-subtle" />
+                          <span className="font-mono text-lg font-bold text-primary">
+                            {formatPasskeyTime(passkeyTimeLeft || 0)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-3 py-4">
+                        <div className="p-3 bg-slate-100 rounded-full">
+                          <ShieldCheck className="w-8 h-8 text-slate-400" />
+                        </div>
+                        <p className="text-slate-500 font-medium">No active passkey</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <Button
+                      onClick={generatePasskey}
+                      className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-bold shadow-lg shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                      disabled={isGeneratingKey}
+                    >
+                      {isGeneratingKey ? (
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      ) : (
+                        <>
+                          <RefreshCcw className="w-5 h-5" />
+                          Generate New Passkey
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-[11px] text-center text-slate-500 leading-relaxed max-w-[280px] mx-auto">
+                      Generating a new key will instantly invalidate the old one. Keys are valid for 2 minutes for initial entry.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-t-4 border-t-slate-400 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-lg">Security Logs & Info</CardTitle>
+                  <CardDescription>System access policy overview</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl space-y-3">
+                    <h4 className="text-sm font-bold text-orange-800 flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4" />
+                      Access Control Policy
+                    </h4>
+                    <ul className="space-y-2.5 text-xs text-orange-700 font-medium list-disc pl-4 leading-relaxed">
+                      <li>Passkeys grant <strong>10 hours</strong> of access to the Quotation Maker.</li>
+                      <li>Admin login (Password) completely bypasses the passkey requirement.</li>
+                      <li>Brute-force protection: 5 failed attempts locks entry for the session.</li>
+                    </ul>
+                  </div>
+
+                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                    <p className="text-xs text-blue-800 leading-relaxed">
+                      <strong>Pro-tip:</strong> You can keep this tab open to monitor when a passkey is about to expire if you're coordinating with a specific client.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
