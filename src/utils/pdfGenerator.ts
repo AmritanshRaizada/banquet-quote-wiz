@@ -392,7 +392,7 @@ export const generateQuotationPDF = async (
     // Draw headers (numeric headers centered)
     pdf.text('NO', colNoX, y);
     pdf.text('DESCRIPTION', colServiceX, y);
-    pdf.text('ROOM', paxCenter, y, { align: 'center' });
+    pdf.text('ROOMS', paxCenter, y, { align: 'center' });
     pdf.text('PRICE', priceCenter, y, { align: 'center' });
     pdf.text('GST', gstCenter, y, { align: 'center' });
     pdf.text('AMOUNT', amountCenter, y, { align: 'center' });
